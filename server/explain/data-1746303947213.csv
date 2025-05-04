@@ -1,0 +1,5 @@
+"QUERY PLAN"
+"Seq Scan on items  (cost=0.00..10.70 rows=35 width=1044) (actual time=0.057..0.060 rows=2 loops=1)"
+"  Filter: isactive"
+"Planning Time: 0.157 ms"
+"Execution Time: 0.159 ms"

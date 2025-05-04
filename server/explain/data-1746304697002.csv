@@ -1,0 +1,8 @@
+"QUERY PLAN"
+"Bitmap Heap Scan on bids  (cost=4.21..14.35 rows=7 width=28) (actual time=0.053..0.054 rows=1 loops=1)"
+"  Recheck Cond: (userid = 2)"
+"  Heap Blocks: exact=1"
+"  ->  Bitmap Index Scan on idx_bids_userid  (cost=0.00..4.21 rows=7 width=0) (actual time=0.021..0.021 rows=6 loops=1)"
+"        Index Cond: (userid = 2)"
+"Planning Time: 1.549 ms"
+"Execution Time: 0.152 ms"
