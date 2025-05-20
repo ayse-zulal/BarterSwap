@@ -16,10 +16,10 @@ router.get('/', async (req, res) => {
 // POST create new item
 router.post('/', async (req, res) => {
   try {
-    const { itemName, startingPrice, currentPrice, isActive } = req.body;
+    const { userId, title, description, category, startingPrice, currentPrice, image, itemCondition, isActive, isRefunded } = req.body;
     const newItem = await pool.query(
-      'INSERT INTO Items (itemName, startingPrice, currentPrice, isActive) VALUES ($1, $2, $3, $4) RETURNING *',
-      [itemName, startingPrice, currentPrice, isActive]
+      'INSERT INTO Items (userId, title, description, category, startingPrice, currentPrice, image, itemCondition, isActive, isRefunded) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *',
+      [userId, title, description, category, startingPrice, currentPrice, image, itemCondition, isActive, isRefunded]
     );
     res.json(newItem.rows[0]);
   } catch (err) {

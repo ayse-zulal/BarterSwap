@@ -18,7 +18,7 @@ router.post('/', async (req, res) => {
   try {
     const { userId, itemId, bidAmount } = req.body;
     // You can call your insert_bid function via SQL here
-    await pool.query('SELECT insert_bid($1, $2, $3)', [userId, itemId, bidAmount]);
+    await pool.query('INSERT INTO Bids (userId, itemId, bidAmount) VALUES ($1, $2, $3) RETURNING *', [userId, itemId, bidAmount]);
     res.json({ message: 'Bid placed successfully' });
   } catch (err) {
     console.error(err.message);

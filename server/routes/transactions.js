@@ -16,10 +16,10 @@ router.get('/', async (req, res) => {
 // POST create a new transaction
 router.post('/', async (req, res) => {
   try {
-    const { userId, amount, transactionType, transactionDate } = req.body;
+    const { buyerId, sellerId, itemId, price, transactionDate } = req.body;
     const newTransaction = await pool.query(
-      'INSERT INTO Transactions (userId, amount, transactionType, transactionDate) VALUES ($1, $2, $3, $4) RETURNING *',
-      [userId, amount, transactionType, transactionDate]
+      'INSERT INTO Transactions (buyerId, sellerId, itemId, price, transactionDate) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [buyerId, sellerId, itemId, price, transactionDate]
     );
     res.json(newTransaction.rows[0]);
   } catch (err) {

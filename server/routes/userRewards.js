@@ -16,10 +16,10 @@ router.get('/', async (req, res) => {
 // POST assign a reward to user
 router.post('/', async (req, res) => {
   try {
-    const { userId, rewardId, dateAssigned } = req.body;
+    const { userId, rewardId, timeEarned } = req.body;
     const newUserReward = await pool.query(
-      'INSERT INTO UserRewards (userId, rewardId, dateAssigned) VALUES ($1, $2, $3) RETURNING *',
-      [userId, rewardId, dateAssigned]
+      'INSERT INTO UserRewards (userId, rewardId, timeEarned) VALUES ($1, $2, $3) RETURNING *',
+      [userId, rewardId, timeEarned]
     );
     res.json(newUserReward.rows[0]);
   } catch (err) {

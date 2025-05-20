@@ -16,10 +16,10 @@ router.get('/', async (req, res) => {
 // POST create a new reward
 router.post('/', async (req, res) => {
   try {
-    const { rewardName, pointsRequired } = req.body;
+    const { rewardName, rewardType, rewardAmount, conditionType, conditionValue } = req.body;
     const newReward = await pool.query(
-      'INSERT INTO Rewards (rewardName, pointsRequired) VALUES ($1, $2) RETURNING *',
-      [rewardName, pointsRequired]
+      'INSERT INTO Rewards (rewardName, rewardType, rewardAmount, conditionType, conditionValue) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [rewardName, rewardType, rewardAmount, conditionType, conditionValue]
     );
     res.json(newReward.rows[0]);
   } catch (err) {

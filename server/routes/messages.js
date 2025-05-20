@@ -16,10 +16,10 @@ router.get('/', async (req, res) => {
 // POST create a new message
 router.post('/', async (req, res) => {
   try {
-    const { senderId, receiverId, messageText } = req.body;
+    const { senderId, receiverId, content, isRead, timeStamp } = req.body;
     const newMessage = await pool.query(
-      'INSERT INTO Messages (senderId, receiverId, messageText) VALUES ($1, $2, $3) RETURNING *',
-      [senderId, receiverId, messageText]
+      'INSERT INTO Messages (senderId, receiverId, content, isRead, timeStamp) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [senderId, receiverId, content, isRead, timeStamp]
     );
     res.json(newMessage.rows[0]);
   } catch (err) {

@@ -16,10 +16,10 @@ router.get('/', async (req, res) => {
 // POST create a new student
 router.post('/', async (req, res) => {
   try {
-    const { studentId, userId, studentName, department } = req.body;
+    const { studentId, userId, studentName, password, email } = req.body;
     const newStudent = await pool.query(
-      'INSERT INTO Students (studentId, userId, studentName, department) VALUES ($1, $2, $3, $4) RETURNING *',
-      [studentId, userId, studentName, department]
+      'INSERT INTO Students (studentId, userId, studentName, password, email) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [studentId, userId, studentName, password, email]
     );
     res.json(newStudent.rows[0]);
   } catch (err) {
