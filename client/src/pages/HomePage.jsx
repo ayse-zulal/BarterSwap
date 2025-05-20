@@ -21,7 +21,7 @@ const HomePage = () => {
     >
       <div
         style={{
-          backgroundColor: "#ffe4e6", 
+          backgroundColor: "#ecd7fa", 
           borderRadius: "12px",
           padding: "30px",
           maxWidth: "1200px",

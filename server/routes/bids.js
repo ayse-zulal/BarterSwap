@@ -26,4 +26,21 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const bids = await pool.query(
+      `SELECT b.*, i.title AS itemname, i.image AS itemimage
+       FROM Bids b
+       JOIN Items i ON b.itemId = i.itemId
+       WHERE b.userId = $1
+       ORDER BY b.created_at DESC`,
+      [userId]
+    );
+    res.json(bids.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
 module.exports = router;
