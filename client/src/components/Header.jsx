@@ -6,7 +6,7 @@ const Header = () => {
   return (
     <header
       style={{
-        backgroundColor: 'lightblue',
+        backgroundColor: '#C3b091',
         color: 'white',
         padding: '12px 24px',
         display: 'flex',
@@ -17,7 +17,7 @@ const Header = () => {
 
       <div style={{ display: 'flex', alignItems: 'center' }}>
       <img src={logo} alt="Logo" style={{ width: '40px', height: 'auto', paddingRight: '12px' }} />
-      <span style={{ fontSize: '24px', fontWeight: 'bold', paddingRight: '12px' }}>BarterSwap</span>
+      <span style={{ fontSize: '24px', fontWeight: 'bold', paddingRight: '12px' }}>SwapSwap</span>
       </div>
       <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
         <input

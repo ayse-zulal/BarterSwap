@@ -15,17 +15,64 @@ router.get('/', async (req, res) => {
 
 // POST place a bid
 router.post('/', async (req, res) => {
+  const client = await pool.connect();
   try {
-    const { userId, itemId, bidAmount } = req.body;
-    // You can call your insert_bid function via SQL here
-    await pool.query('INSERT INTO Bids (userId, itemId, bidAmount) VALUES ($1, $2, $3) RETURNING *', [userId, itemId, bidAmount]);
-    res.json({ message: 'Bid placed successfully' });
+    const { itemId, userId, bidAmount } = req.body;
+
+    await client.query('BEGIN');
+
+    const existing = await client.query(
+      'SELECT MAX(bidAmount) as max FROM Bids WHERE itemId = $1',
+      [itemId]
+    );
+
+    if (existing.rows[0].max !== null && bidAmount <= existing.rows[0].max) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ message: 'Bid must be higher than existing bids' });
+    }
+
+    const newBid = await client.query(
+      'INSERT INTO Bids (itemId, userId, bidAmount) VALUES ($1, $2, $3) RETURNING *',
+      [itemId, userId, bidAmount]
+    );
+
+    await client.query(
+      'UPDATE Items SET currentPrice = $1 WHERE itemId = $2',
+      [bidAmount, itemId]
+    );
+
+    await client.query('COMMIT');
+
+    res.json({
+      message: 'Bid placed successfully',
+      bid: newBid.rows[0],
+    });
+
   } catch (err) {
-    console.error(err.message);
-    res.status(400).send(err.detail || 'Error placing bid');
+    await client.query('ROLLBACK');
+    console.error('Bid creation error:', err.message);
+    res.status(500).send('Server error during bid process');
+  } finally {
+    client.release();
   }
 });
 
+router.get('/item/:itemId', async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const result = await pool.query(`
+      SELECT Bids.*, Students.studentName AS bidderName
+      FROM Bids
+      JOIN Students ON Bids.userId = Students.userId
+      WHERE Bids.itemId = $1
+      ORDER BY Bids.bidAmount DESC
+    `, [itemId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
 router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -34,7 +81,7 @@ router.get('/user/:userId', async (req, res) => {
        FROM Bids b
        JOIN Items i ON b.itemId = i.itemId
        WHERE b.userId = $1
-       ORDER BY b.created_at DESC`,
+       ORDER BY b.bidid DESC`,
       [userId]
     );
     res.json(bids.rows);

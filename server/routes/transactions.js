@@ -12,7 +12,37 @@ router.get('/', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+router.get('/buyer/:userId', async (req, res) => {
+  const { userId } = req.params;
 
+  try {
+    const result = await pool.query(
+      `
+      SELECT 
+        t.transactionid,
+        t.itemid,
+        t.buyerid,
+        t.sellerid,
+        t.price,
+        t.transactiondate,
+        i.title AS item_title,
+        i.image,
+        i.category,
+        i.itemcondition
+      FROM Transactions t
+      JOIN Items i ON t.itemid = i.itemid
+      WHERE t.buyerid = $1
+      ORDER BY t.transactiondate DESC
+      `,
+      [userId]
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching buyer transactions:', err.message);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 // POST create a new transaction
 router.post('/', async (req, res) => {
   try {

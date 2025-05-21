@@ -1,0 +1,4 @@
+backgroundColor: 'lightblue',
+backgroundColor: #dcf7d0; açık yeşil bu
+backgroundColor: #ecd7fa; açık mor bu
+backgroundColor: '#ffe6f0', // açık pembe
