@@ -1,6 +1,6 @@
 import './App.css';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-
+import React, { useEffect } from 'react';
 import Header from './components/Header';
 import HomePage from './pages/HomePage';
 import UserPage from './pages/UserPage';
@@ -8,8 +8,14 @@ import AdminPage from './pages/AdminPage';
 import ItemPage from './pages/ItemPage';
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
-
+import useAuthStore from './store/AuthStore.ts';
 function App() {
+
+const fetchUser = useAuthStore(state => state.fetchUser);
+
+useEffect(() => {
+  fetchUser();
+}, []);
   return (
     <Router>
       <div className="App">

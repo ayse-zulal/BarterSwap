@@ -5,13 +5,41 @@ const pool = require('../db');
 // GET all items
 router.get('/available', async (req, res) => {
   try {
-    const items = await pool.query('SELECT * FROM Items WHERE isactive = TRUE');
-    res.json(items.rows);
+    const itemsResult = await pool.query('SELECT * FROM Items WHERE isactive = TRUE');
+    const items = itemsResult.rows;
+
+    if (items.length === 0) {
+      return res.json([]);
+    }
+
+    const bidsResult = await pool.query(
+      'SELECT * FROM Bids WHERE itemid = ANY($1)',
+      [items.map(item => item.itemid)]
+    );
+
+    const bids = bidsResult.rows;
+
+    const itemIdToBids = {};
+    for (const bid of bids) {
+      if (!itemIdToBids[bid.itemid]) {
+        itemIdToBids[bid.itemid] = [];
+      }
+      itemIdToBids[bid.itemid].push(bid);
+    }
+
+    const itemsWithBids = items.map(item => ({
+      ...item,
+      bids: itemIdToBids[item.itemid] || [],
+    }));
+
+    res.json(itemsWithBids);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
   }
 });
+
+
 router.get('/:itemId', async (req, res) => {
   try {
     const { itemId } = req.params;
@@ -31,7 +59,7 @@ router.put("/:itemId/mark-sold", async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    // 1. Item bilgisini kilitle ve al
+    // First lock the item and take it
     const itemRes = await client.query(
       `SELECT itemid, userid AS seller_id, isactive 
        FROM items WHERE itemid = $1 FOR UPDATE`,
@@ -50,7 +78,7 @@ router.put("/:itemId/mark-sold", async (req, res) => {
       return res.status(400).json({ error: "Item already sold" });
     }
 
-    // 2. En yüksek bid'i kilitle ve al
+    // Second lock the highest bid and take it
     const bidRes = await client.query(
       `SELECT bidid, userid AS buyer_id, bidamount 
        FROM bids 
@@ -68,7 +96,7 @@ router.put("/:itemId/mark-sold", async (req, res) => {
 
     const highestBid = bidRes.rows[0];
 
-    // 3. Buyer ve Seller bakiyelerini kilitle ve al
+    // Third lock the buyer and seller balances and take them
     const balancesRes = await client.query(
       `SELECT userId, balance FROM virtualcurrency WHERE userId = ANY($1::int[]) FOR UPDATE`,
       [[highestBid.buyer_id, item.seller_id]]
@@ -83,7 +111,7 @@ router.put("/:itemId/mark-sold", async (req, res) => {
     }
 
     if (buyerBalanceRow.balance < highestBid.bidAmount) {
-      // Parası yetmiyor, o bid'i silebiliriz
+      // Buyer has insufficient balance, remove the bid
       await client.query(
         `DELETE FROM bids WHERE bidid = $1`,
         [highestBid.bidid]
@@ -93,7 +121,7 @@ router.put("/:itemId/mark-sold", async (req, res) => {
       return res.status(400).json({ error: "Buyer has insufficient balance, bid removed" });
     }
 
-    // 4. Para transferi
+    // Money transfer
     await client.query(
       `UPDATE virtualcurrency SET balance = balance - $1 WHERE userId = $2`,
       [highestBid.bidamount, highestBid.buyer_id]
@@ -104,14 +132,14 @@ router.put("/:itemId/mark-sold", async (req, res) => {
       [highestBid.bidamount, item.seller_id]
     );
 
-    // 5. Transaction kaydı ekle
+    // Add transaction record
     await client.query(
       `INSERT INTO transactions (itemid, sellerid, buyerid, price, transactiondate)
        VALUES ($1, $2, $3, $4, $5)`,
       [itemId, item.seller_id, highestBid.buyer_id, highestBid.bidamount, new Date()]
     );
 
-    // 6. Item'i satıldı olarak işaretle
+    // Mark item as sold
     await client.query(
       `UPDATE items SET isactive = FALSE, userid = $1 WHERE itemid = $2`,
       [highestBid.buyer_id, itemId]
@@ -143,6 +171,7 @@ router.get('/user/:userId', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
 // POST create new item
 router.post('/', async (req, res) => {
   try {

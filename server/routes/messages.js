@@ -13,6 +13,37 @@ router.get('/', async (req, res) => {
   }
 });
 
+router.get("/:userId", async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT 
+        m.*,
+        CASE 
+          WHEN m.senderid = $1 THEN m.receiverid
+          ELSE m.senderid
+        END AS chat_partner_id
+      FROM Messages m
+      WHERE m.senderid = $1 OR m.receiverid = $1
+      ORDER BY chat_partner_id, m.timestamp DESC;
+    `, [userId]);
+
+    const messagesByPartner = {};
+    for (let row of result.rows) {
+      const partnerId = row.chat_partner_id;
+      if (!messagesByPartner[partnerId]) {
+        messagesByPartner[partnerId] = [];
+      }
+      messagesByPartner[partnerId].push(row);
+    }
+
+    res.json(messagesByPartner);
+  } catch (err) {
+    console.error("Error fetching messages:", err);
+    res.status(500).json({ error: "Failed to fetch messages" });
+  }
+});
+
 // POST create a new message
 router.post('/', async (req, res) => {
   try {

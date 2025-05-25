@@ -1,56 +1,32 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import useAuthStore from '../store/AuthStore.ts'; 
 
 const UserPage = () => {
-  const [userId, setUserId] = useState(null);
-  const [user, setUser] = useState(null);
-  const [userItems, setUserItems] = useState([]);
-  const [bids, setBids] = useState([]);
-  const [purchasedItems, setPurchasedItems] = useState([]);
+  const user = useAuthStore(state => state.user);
+  const purchasedItems = useAuthStore(state => state.purchasedItems);
+  const userItems = useAuthStore(state => state.userItems);
+  const bids = useAuthStore(state => state.bids);
+  const messages = useAuthStore(state => state.messages);
+  console.log(messages)
+
   const [newItem, setNewItem] = useState({ userId: 0, title: "", description: "", startingPrice: 0, currentPrice: 0, image: "", category: "", itemCondition: "", isActive: false, isRefunded: false });
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const res = await axios.get("http://localhost:5000/api/auth/me", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-        });
-        const userData = await axios.get(`http://localhost:5000/api/users/${res.data.userId}`);
-        setUserId(res.data.userId);
-        setUser(userData.data);
-      } catch (err) {
-        console.error("User fetch failed:", err);
-      }
-    };
-
-    fetchUserData();
-  }, []);
-
-  useEffect(() => {
-  if (user) {
-    axios.get(`http://localhost:5000/api/items/user/${userId}`)
-      .then(res => setUserItems(res.data))
-      .catch(err => console.error("Failed to fetch user items", err));
-    axios.get(`http://localhost:5000/api/bids/user/${userId}`)
-      .then(res => setBids(res.data))
-      .catch(err => console.error("Failed to fetch user bids", err));
-    axios.get(`http://localhost:5000/api/transactions/buyer/${userId}`)
-      .then(res => setPurchasedItems(res.data))
-      .catch(err => console.error("Failed to fetch user purchased items", err));
-  }
-}, [user]);
   const handleItemCreate = async (e) => {
     e.preventDefault();
     try {
-      setNewItem({ ...newItem, userId: user.user.userid })
-      await axios.post("http://localhost:5000/api/items", newItem);
+      const itemToPost = {
+      ...newItem,
+      userId: user.user.userid 
+     };
+      await axios.post("http://localhost:5000/api/items", itemToPost);
       alert("Item created!");
       setNewItem({ userId: user.user.userid, title: "", description: "", startingPrice: 0, currentPrice: 0, image: "", category: "", itemCondition: "", isActive: false, isRefunded: false });
+      window.location.reload();
     } catch (err) {
       console.error("Item creation failed:", err);
     }
   };
-  console.log("userItems", purchasedItems);
 
   return (
    <div style={layoutStyles.container}>
@@ -65,6 +41,10 @@ const UserPage = () => {
             <p><strong>Balance:</strong> {user.balance.balance} coins</p>
           </div>
         )}
+        <div style={styles.card}>
+            <h3 style={styles.sectionTitle}>Messages</h3>
+            
+          </div>
       </div>
 
       <div style={layoutStyles.rightColumn}>
@@ -155,7 +135,7 @@ const UserPage = () => {
 
         <div style={styles.card}>
           <h3 style={{ marginBottom: '1rem' }}>Bids</h3>
-          {bids.length > 0 ? (
+          {bids?.length > 0 ? (
             <table style={styles2.table}>
               <thead style={styles2.thead}>
                 <tr>
@@ -182,7 +162,7 @@ const UserPage = () => {
           )}
 
           <h3 style={{ ...styles.sectionTitle, marginTop: '2rem' }}>Your Items</h3>
-          {userItems.length > 0 ? (
+          {userItems?.length > 0 ? (
             <div style={styles.cardGrid}>
               {userItems.map((item) => (
                 <div key={item.itemid} style={styles.itemCard} onClick={() => window.location.href = `/items/${item.itemid}`}>
@@ -201,7 +181,7 @@ const UserPage = () => {
           )}
 
           <h3 style={{ ...styles.sectionTitle, marginTop: '2rem' }}>Purchased Items</h3>
-          {purchasedItems.length > 0 ? (
+          {purchasedItems?.length > 0 ? (
             <div style={styles.cardGrid}>
               {purchasedItems.map((item) => (
                 <div key={item.itemid} style={styles.itemCard} onClick={() => window.location.href = `/items/${item.itemid}`}>
@@ -304,11 +284,6 @@ const styles = {
     borderRadius: '10px',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
   },
-  sectionTitle: {
-    fontSize: '1.25rem',
-    fontWeight: '600',
-    marginBottom: '1rem',
-  },
   form: {
     display: 'flex',
     flexDirection: 'column',
@@ -360,7 +335,7 @@ const styles = {
   },
   cardGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
     gap: '1rem',
   },
   itemCard: {
