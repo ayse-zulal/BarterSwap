@@ -7,7 +7,7 @@ const BidFilters = ({ onApply }) => {
   const [name, setName] = useState("");
 
   return (
-    <div style={{ marginBottom: "1rem", display: "flex", flexDirection: "row", gap: "0.5rem" }}>
+    <div style={{ marginBottom: "1rem", display: "flex", flexWrap: "wrap", flexDirection: "row", gap: "0.5rem" }}>
       <input
         type="string"
         placeholder="Item Name"
@@ -61,10 +61,16 @@ const BidFilters = ({ onApply }) => {
                     }}>
         Apply Filters
       </button>
-      <button onClick={() => onApply({ minPrice: "", maxPrice:"", wonOnly:false, name:"" })} style={{
+      <button onClick={() => {
+          setMinPrice("");
+          setMaxPrice("");
+          setWonOnly(false);
+          setName("");
+          onApply({ minPrice: "", maxPrice: "", wonOnly:false, name: ""});
+        }} style={{
                       marginTop: '0.5rem',
                       padding: '0.6rem 1.2rem',
-                      backgroundColor: 'red',
+                      backgroundColor: '#dd7171',
                       color: 'white',
                       border: 'none',
                       borderRadius: '8px',

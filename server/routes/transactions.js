@@ -25,7 +25,7 @@ router.get('/buyer/:userId', async (req, res) => {
         t.sellerid,
         t.price,
         t.transactiondate,
-        i.title AS item_title,
+        i.title AS itemname,
         i.image,
         i.category,
         i.itemcondition

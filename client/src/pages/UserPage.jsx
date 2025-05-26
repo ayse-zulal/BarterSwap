@@ -11,6 +11,7 @@ const UserPage = () => {
   const bids = useAuthStore(state => state.bids);
   const [filteredBids, setFilteredBids] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
+  const [filteredPurchasedItems, setFilteredPurchasedItems] = useState(purchasedItems);
 
   const [newItem, setNewItem] = useState({ userId: 0, title: "", description: "", startingPrice: 0, currentPrice: 0, image: "", category: "", itemCondition: "", isActive: false, isRefunded: false });
 
@@ -33,7 +34,8 @@ const UserPage = () => {
   useEffect(() => {
   setFilteredBids(bids);
   setFilteredItems(userItems);
-  }, [bids, userItems]);
+  setFilteredPurchasedItems(purchasedItems);
+  }, [bids, userItems, purchasedItems]);
 
   const applyBidFilters = ({ minPrice, maxPrice, wonOnly, name }) => {
   let filtered = [...bids];
@@ -45,17 +47,35 @@ const UserPage = () => {
 
   setFilteredBids(filtered);
   };
-  const applyItemFilters = ({ minPrice, maxPrice, date, name }) => {
-  let filtered = [...userItems];
-  console.log(userItems);
 
-  if (minPrice) filtered = filtered.filter(b => b.currentPrice >= parseFloat(minPrice));
-  if (maxPrice) filtered = filtered.filter(b => b.currentPrice <= parseFloat(maxPrice));
-  if (date) filtered = filtered.filter(b => b.purchaseDate === date);
-  if (name) filtered = filtered.filter(b => b.title.toLowerCase().includes(name.toLowerCase()));
-
-  setFilteredItems(filtered);
+  const applyItemFilters = ({ minPrice, maxPrice, date, name, type }) => {
+    let filtered = type ? [...purchasedItems] : [...userItems];
+    console.log(date);
+    if(type) {
+      if (minPrice) filtered = filtered.filter(b => b.price >= parseFloat(minPrice));
+      if (maxPrice) filtered = filtered.filter(b => b.price <= parseFloat(maxPrice));
+      if (date) filtered = filtered.filter(t => isSameDate(t.transactiondate, date));
+      if (name) filtered = filtered.filter(b => b.itemname.toLowerCase().includes(name.toLowerCase()));
+      setFilteredPurchasedItems(filtered)
+    }
+    else {
+      if (minPrice) filtered = filtered.filter(b => b.currentPrice >= parseFloat(minPrice));
+      if (maxPrice) filtered = filtered.filter(b => b.currentPrice <= parseFloat(maxPrice));
+      if (name) filtered = filtered.filter(b => b.title.toLowerCase().includes(name.toLowerCase()));
+      setFilteredItems(filtered)
+    }
   };
+
+  const isSameDate = (transactionDateStr, filterDateStr) => {
+    const transactionDate = new Date(transactionDateStr);
+    const [year, month, day] = filterDateStr.split('-').map(Number);
+
+    return (
+      transactionDate.getDate() === day &&
+      transactionDate.getMonth() + 1 === month && 
+      transactionDate.getFullYear() === year
+    );
+};
 
   return (
    <div style={layoutStyles.container}>
@@ -193,7 +213,7 @@ const UserPage = () => {
           )}
 
           <h3 style={{ ...styles.sectionTitle, marginTop: '2rem' }}>Your Items</h3>
-          <ItemFilters onApply={applyItemFilters} />
+          <ItemFilters onApply={applyItemFilters} type={false} />
           {filteredItems?.length > 0 ? (
             <div style={styles.cardGrid}>
               {filteredItems.map((item) => (
@@ -213,9 +233,10 @@ const UserPage = () => {
           )}
 
           <h3 style={{ ...styles.sectionTitle, marginTop: '2rem' }}>Purchased Items</h3>
-          {purchasedItems?.length > 0 ? (
+          <ItemFilters onApply={applyItemFilters} type={true} />
+          {filteredPurchasedItems.length > 0 ? (
             <div style={styles.cardGrid}>
-              {purchasedItems.map((item) => (
+              {filteredPurchasedItems.map((item) => (
                 <div key={item.itemid} style={styles.itemCard} onClick={() => window.location.href = `/items/${item.itemid}`}>
                   <img src={item.image} alt={item.item_title} style={styles.itemImage} />
                   <div style={styles.itemInfo}>
@@ -247,12 +268,12 @@ const layoutStyles = {
     flexWrap: 'wrap',
   },
   leftColumn: {
-    flex: '1 1 300px',
+    flex: '1 1 280px',
     minWidth: '250px',
     textAlign: 'left',
   },
   rightColumn: {
-    flex: '2 1 600px',
+    flex: '2 1 650px',
     minWidth: '250px',
   },
 };
