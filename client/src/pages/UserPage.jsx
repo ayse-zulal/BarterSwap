@@ -85,6 +85,24 @@ const handleUpdateItem = (item) => {
     }
   };
 
+  const handleRefundItem = async (itemId) => {
+  try {
+    const token = localStorage.getItem("token");
+
+    const res = await axios.post(`http://localhost:5000/api/items/${itemId}/refund`, {}, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+
+    alert("Refund completed successfully!");
+    // Sayfayı güncelle, item listeni refresh et
+  } catch (err) {
+    console.error("Refund failed:", err.response?.data || err.message);
+    alert("Refund failed!");
+  }
+};
+
   const handleUpdate = async () => {
     try {
       const res = await fetch(`http://localhost:5000/api/students/${user?.student.studentid}`, {
@@ -173,6 +191,7 @@ const handleUpdateItem = (item) => {
       transactionDate.getFullYear() === year
     );
 };
+
 
   return (
    <div style={layoutStyles.container}>
@@ -587,7 +606,8 @@ const handleUpdateItem = (item) => {
           {filteredPurchasedItems.length > 0 ? (
             <div style={styles.cardGrid}>
               {filteredPurchasedItems.slice(0, visibleCountPurchase).map((item) => (
-                <div key={item.itemid} style={styles.itemCard} onClick={() => window.location.href = `/items/${item.itemid}`}>
+                <div key={item.itemid} style={styles.itemCard} >
+                  {console.log(item)}
                   <img src={item.image} alt={item.item_title} style={styles.itemImage} />
                   <div style={styles.itemInfo}>
                     <h4 style={styles.itemTitle}>{item.item_title}</h4>
@@ -595,6 +615,23 @@ const handleUpdateItem = (item) => {
                     <p style={styles.itemDetail}><strong>Price:</strong> {item.price} coins</p>
                     <p style={styles.itemDetail}><strong>Condition:</strong> {item.itemcondition}</p>
                     <p style={styles.itemDetail}><strong>Purchased On:</strong> {new Date(item.transactiondate).toLocaleDateString()}</p>
+                  </div>
+                  <div style={{ marginTop: "0.5rem", display: "flex", gap: "8px", justifyContent: "center" }}>
+                    <button
+                      onClick={() => { handleRefundItem(item.itemid); fetchUser(); }}
+                      style={{
+                        padding: '0.4rem 0.8rem',
+                        backgroundColor: '#6495ed',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        marginBottom: '0.5rem'
+                      }}
+                    >
+                      Refund
+                    </button>
                   </div>
                 </div>
               ))}

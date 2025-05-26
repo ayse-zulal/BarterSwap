@@ -267,6 +267,74 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Refund an item
+router.post("/:id/refund", async (req, res) => {
+  const client = await pool.connect();
+  const itemId = req.params.id;
+
+  try {
+    await client.query("BEGIN");
+
+    // 1. Item'ı al
+    const itemRes = await client.query("SELECT * FROM Items WHERE itemid = $1", [itemId]);
+    const item = itemRes.rows[0];
+
+    if (!item) {
+      throw new Error("Item not found");
+    }
+
+    // 2. Transaction'dan satın alan kişiyi ve ödediği fiyatı al
+    const txRes = await client.query(
+      "SELECT * FROM Transactions WHERE itemId = $1",
+      [itemId]
+    );
+    const transaction = txRes.rows[0];
+
+    if (!transaction) {
+      throw new Error("No transaction found for this item");
+    }
+
+    const buyerId = transaction.buyerid;
+    const sellerId = transaction.sellerid;
+    const amountPaid = transaction.price;
+
+    // 3. Buyer'ın parasını iade et
+    await client.query(
+      "UPDATE VirtualCurrency SET balance = balance + $1 WHERE userId = $2",
+      [amountPaid, buyerId]
+    );
+
+    await client.query(
+      "UPDATE VirtualCurrency SET balance = balance - $1 WHERE userId = $2",
+      [amountPaid, sellerId]
+    );
+
+    // 4. Tüm teklifleri sil
+    await client.query("DELETE FROM Bids WHERE itemId = $1", [itemId]);
+
+    // 5. Transaction kaydını sil
+    await client.query("DELETE FROM Transactions WHERE itemId = $1", [itemId]);
+
+    // 6. Item'ı güncelle: refunded, aktif, currentPrice reset
+    await client.query(
+      "UPDATE Items SET isRefunded = true, isActive = true, currentPrice = startingPrice WHERE itemid = $1",
+      [itemId]
+    );
+
+    await client.query("COMMIT");
+    res.status(200).json({ message: "Refund processed successfully." });
+
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Refund error:", err);
+    res.status(500).json({ error: "Refund failed." });
+  } finally {
+    client.release();
+  }
+});
+
+
+
 router.delete("/:itemid", async (req, res) => {
   const { itemid } = req.params;
 

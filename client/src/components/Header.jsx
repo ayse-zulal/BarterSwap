@@ -35,29 +35,12 @@ const Header = () => {
         <span style={{ fontSize: '24px', fontWeight: 'bold', paddingRight: '12px' }}>SwapSwap</span>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-        <input
-          type="text"
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{
-            padding: '6px 12px',
-            borderRadius: '20px',
-            border: 'none',
-            width: '60%',
-            maxWidth: '400px',
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-          }}
-        />
-      </div>
-
       <nav style={{ display: 'flex', gap: '32px' }}>
         <Link to="/" style={{ color: 'white', textDecoration: 'none' }}>Home</Link>
         {isAuthenticated ? (
         <>
           <span>Welcome, {user?.student.studentname}</span>
-          <Link to="/user" style={{ color: 'white', textDecoration: 'none' }}>User Page</Link>
+          <Link to={user?.student.studentname === "ADMIN" ? "/admin" : "/user"} style={{ color: 'white', textDecoration: 'none' }}>{user?.student.studentname === "ADMIN" ? "Admin Page" : "User Page"}</Link>
           <button onClick={() => { logout(); navigate("/login"); }} style={{backgroundColor: '#f0efd9', color: '#C3b091', padding: '10px 20px',border: 'none',borderRadius: '6px',cursor: 'pointer',fontWeight: 'bold',transition: 'background-color 0.3s ease'}}>Logout</button>
         </>
       ) : (

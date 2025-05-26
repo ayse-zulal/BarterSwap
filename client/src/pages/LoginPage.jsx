@@ -23,7 +23,7 @@ const LoginPage = () => {
       localStorage.setItem("token", res.data.token);
       await fetchUser();
 
-      if (studentId === "0") {
+      if (studentId === "999999") {
         navigate("/admin");
       } else {
         navigate("/");

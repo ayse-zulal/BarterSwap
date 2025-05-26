@@ -8,12 +8,25 @@ const useItemStore = create((set) => ({
     const res = await axios.get('http://localhost:5000/api/items/available');
     set({ items: res.data, filteredItems: res.data });
   },
-  // while filtering, even if I just type a single character that is in the name of an item, it adds the item to filteredItems, should be fixed maybe later
-  filterItems: (query) =>
+
+  filterItems: ({
+    searchQuery = "",
+    minPrice = 0,
+    maxPrice = Infinity,
+    minBids = 0,
+    category = "",
+    condition = ""
+  }) =>
     set((state) => ({
-      filteredItems: state.items.filter((item) =>
-        item.title.toLowerCase().includes(query.toLowerCase())
-      ),
+      filteredItems: state.items.filter((item) => {
+        const titleMatch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
+        const priceMatch = item.currentprice >= minPrice && item.currentprice <= maxPrice;
+        const bidMatch = (item.bids?.length || 0) >= minBids;
+        const categoryMatch = category ? item.category === category : true;
+        const conditionMatch = condition ? item.condition === condition : true;
+
+        return titleMatch && priceMatch && bidMatch && categoryMatch && conditionMatch;
+      }),
     })),
 }));
 

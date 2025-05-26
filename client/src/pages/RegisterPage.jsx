@@ -1,17 +1,24 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import useAuthStore from '../store/AuthStore.ts';
 const RegisterPage = () => {
   const [userName, setUserName] = useState("");
   const [studentId, setStudentId] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   const [balance, setBalance] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
-  
+  const fetchUser = useAuthStore(state => state.fetchUser);
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setError("");
+
+    if (!/^\d{6}$/.test(studentId)) {
+      return setError("Student ID must be exactly 6 digits.");
+    }
 
     try {
       const res = await axios.post("http://localhost:5000/api/auth/register", {
@@ -22,80 +29,117 @@ const RegisterPage = () => {
         balance,
       });
 
-      console.log("Registration successful:", res.data);
-      localStorage.setItem("token", res.data.token);
-      navigate("/"); // girişten sonra yönlendirme yapılabilir
-
+      navigate("/login");
     } catch (err) {
       console.error("Registration failed:", err.response?.data || err.message);
+      setError(err.response?.data?.message || "Registration failed.");
     }
   };
 
   return (
-    <form onSubmit={handleRegister} style={{ margin: "50px", maxWidth: "400px" }}>
-      <h2>Register</h2>
-
-      <input
-        type="text"
-        name="userName"
-        placeholder="UserName"
-        value={userName}
-        required
-        onChange={e => setUserName(e.target.value)}
-        style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
-      />
-
-      <input
-        type="text"
-        name="studentId"
-        placeholder="Student ID"
-        value={studentId}
-        required
-        onChange={e => setStudentId(e.target.value)}
-        style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
-      />
-
-      <input
-        type="password"
-        name="password"
-        placeholder="Password"
-        value={password}
-        required
-        onChange={e => setPassword(e.target.value)}
-        style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
-      />
-
-      <input
-        type="email"
-        name="email"
-        placeholder="Email"
-        value={email}
-        required
-        onChange={e => setEmail(e.target.value)}
-        style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
-      />
-
-      <input
-        type="number"
-        name="balance"
-        placeholder="Initial Balance"
-        value={balance}
-        required
-        onChange={e => setBalance(e.target.value)}
-        style={{ width: "100%", padding: "10px", marginBottom: "10px" }}
-        min="0"
-        step="0.01"
-      />
-
-      <button
-        type="submit"
-        style={{ width: "100%", padding: "10px", backgroundColor: "lightblue", border: "none" }}
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }}>
+      <form
+        onSubmit={handleRegister}
+        style={{
+          backgroundColor: "#C3b091",
+          padding: "30px",
+          borderRadius: "10px",
+          boxShadow: "0 0 10px rgba(0,0,0,0.1)",
+          width: "100%",
+          maxWidth: "400px"
+        }}
       >
-        Register
-      </button>
-    </form>
+        <h2 style={{ textAlign: "center", marginBottom: "20px", color: "white"}}>Please Register</h2>
+
+        {error && <div style={errorStyle}>{error}</div>}
+
+        <input
+          type="text"
+          placeholder="Student Name"
+          value={userName}
+          required
+          onChange={e => setUserName(e.target.value)}
+          style={inputStyle}
+        />
+
+        <input
+          type="text"
+          placeholder="Student ID (6 digits)"
+          value={studentId}
+          required
+          onChange={e => setStudentId(e.target.value)}
+          style={inputStyle}
+        />
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          required
+          onChange={e => setPassword(e.target.value)}
+          style={inputStyle}
+        />
+
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          required
+          onChange={e => setEmail(e.target.value)}
+          style={inputStyle}
+        />
+
+        <input
+          type="number"
+          placeholder="Starting Balance"
+          value={balance}
+          required
+          onChange={e => setBalance(e.target.value)}
+          min="0"
+          step="0.01"
+          style={inputStyle}
+        />
+
+        <button
+          type="submit"
+          style={{
+            width: "100%",
+            padding: "10px",
+            backgroundColor: "#8fbc8f",
+            color: "white",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer"
+          }}
+        >
+          Register
+        </button>
+      </form>
+    </div>
   );
 };
 
-export default RegisterPage;
+const inputStyle = {
+  width: "94%",
+  padding: "10px",
+  marginBottom: "15px",
+  border: "1px solid #ccc",
+  borderRadius: "5px"
+};
 
+const errorStyle = {
+    backgroundColor: "#f8d7da",
+    color: "#cc0000",
+    padding: "10px",
+    borderRadius: "6px",
+    marginBottom: "1rem",
+    textAlign: "center",
+    fontWeight: "bold"
+  }
+
+export default RegisterPage;

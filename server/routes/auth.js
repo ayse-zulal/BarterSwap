@@ -9,12 +9,19 @@ router.post("/register", async (req, res) => {
   const client = await pool.connect();
   const { studentId, userName, password, email, balance } = req.body;
 
+
   try {
+    if (!/^\d{6}$/.test(studentId)) {
+      return res.status(400).json({ error: "Öğrenci numarası 6 basamaklı olmalıdır." });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "Geçersiz e-posta adresi." });
+    }
     await client.query("BEGIN");
 
     const hashed = await bcrypt.hash(password, 10);
 
-    // 1. Users tablosuna ekle
     const userResult = await client.query(
       "INSERT INTO Users (loginStreak, lastLogin, reputation) VALUES ($1, $2, $3) RETURNING *",
       [0, new Date(), 0]
@@ -22,13 +29,11 @@ router.post("/register", async (req, res) => {
 
     const userId = userResult.rows[0].userid;
 
-    // 2. Students tablosuna ekle
     const studentResult = await client.query(
       "INSERT INTO Students (studentId, userId, studentName, password, email) VALUES ($1, $2, $3, $4, $5) RETURNING *",
       [studentId, userId, userName, hashed, email]
     );
 
-    // 3. VirtualCurrency tablosuna başlangıç bakiyesi ile ekle
     await client.query(
       "INSERT INTO VirtualCurrency (userId, balance) VALUES ($1, $2)",
       [userId, balance]
@@ -53,8 +58,6 @@ router.post("/register", async (req, res) => {
     client.release();
   }
 });
-
-
 
 // Login
 router.post("/login", async (req, res) => {
@@ -85,7 +88,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-
+// Authentication
 router.get("/me", verifyToken, (req, res) => {
   res.json({ message: "Access granted", userId: req.user.id });
 });
