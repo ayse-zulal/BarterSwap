@@ -59,20 +59,32 @@ router.post("/register", async (req, res) => {
 // Login
 router.post("/login", async (req, res) => {
   const { studentId, password } = req.body;
+  let student1 = false;
+  let match1 = false;
+
   try {
     const result = await pool.query("SELECT * FROM Students WHERE studentId = $1", [studentId]);
     const student = result.rows[0];
-    if (!student) return res.status(400).json({ error: "Student not found" });
+
+    if (!student) throw new Error("No student");
+
+    student1 = true;
 
     const match = await bcrypt.compare(password, student.password);
-    if (!match) return res.status(400).json({ error: "Incorrect password" });
+    match1 = match;
+
+    if (!match) throw new Error("Wrong password");
 
     const token = jwt.sign({ id: student.userid }, process.env.JWT_SECRET, { expiresIn: "1h" });
     res.json({ token, studentId: student.studentId });
   } catch (err) {
-    res.status(500).json({ error: "Login failed" });
+    if (!student1) return res.status(400).json({ message: "No student found with this student number" });
+    if (!match1) return res.status(400).json({ message: "Incorrect password. Please try again." });
+    console.error(err);
+    res.status(500).json({ message: "Login failed." });
   }
 });
+
 
 router.get("/me", verifyToken, (req, res) => {
   res.json({ message: "Access granted", userId: req.user.id });

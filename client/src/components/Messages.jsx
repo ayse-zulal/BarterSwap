@@ -56,6 +56,33 @@ const MessagesComponent = ({activeUserId }) => {
     fetchMessages();
 }, [activeUserId, refreshMessages]);
 
+  const handleChatClick = async (partnerid, chatData) => {
+    const unreadMessages = chatData.filter(
+      msg => !msg.isread && msg.senderid === partnerid
+    );
+
+    if (unreadMessages.length > 0) {
+      try {
+        await axios.post("http://localhost:5000/api/messages/mark-read", {
+          senderid: partnerid,
+          receiverid: activeUserId, 
+        });
+
+        setRefreshMessages(prev => !prev);
+
+      } catch (err) {
+        console.error("Error marking messages as read", err);
+      }
+    }
+
+    setSelectedChat({
+      messages: chatData,
+      partnerId: partnerid,
+      partnerName: chatData[0]?.partnername,
+    });
+  };
+
+
 
   const styles = {
     card: {
@@ -96,21 +123,32 @@ const MessagesComponent = ({activeUserId }) => {
 
       {!selectedChat ? (
         <div style={styles.chatList}>
-          {Object.entries(messagesByPartner).map(([partnerid, chatData]) => (
-            <div
-              key={partnerid}
-              style={styles.chatUser}
-              onClick={() =>
-                setSelectedChat({
-                  messages: chatData,
-                  partnerId: Number(partnerid),
-                  partnerName: chatData[0]?.partnername
-                })
-              }
-            >
-              {chatData[0]?.partnername}
-            </div>
-          ))}
+          {Object.entries(messagesByPartner)
+          .sort(([, aMessages], [, bMessages]) => {
+            const aTime = new Date(aMessages[0]?.timestamp || 0).getTime();
+            const bTime = new Date(bMessages[0]?.timestamp || 0).getTime();
+            return bTime - aTime;
+          })
+          .map(([partnerid, chatData]) => {
+            const hasUnread = chatData.some(
+              msg => !msg.isread && msg.senderid === Number(partnerid)
+            );
+
+            return (
+              <div
+                key={partnerid}
+                style={{
+                  ...styles.chatUser,
+                  fontWeight: hasUnread ? "bold" : "normal",
+                  backgroundColor: hasUnread ? "#f5f5dc" : "white",
+                }}
+                onClick={() => handleChatClick(Number(partnerid), chatData)}
+              >
+                {chatData[0]?.partnername}
+                {hasUnread && <span style={{ color: "green", marginLeft: "0.5rem" }}>🟢 New</span>}
+              </div>
+            );
+          })}
         </div>
       ) : (
           <>

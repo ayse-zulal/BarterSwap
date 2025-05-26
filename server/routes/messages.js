@@ -66,4 +66,19 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.post('/mark-read', async (req, res) => {
+  const { senderid, receiverid } = req.body;
+  try {
+    await pool.query(
+      `UPDATE Messages
+       SET isread = TRUE
+       WHERE senderid = $1 AND receiverid = $2 AND isread = FALSE`,
+      [senderid, receiverid]
+    );
+    res.json({ message: "Marked as read" });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 module.exports = router;

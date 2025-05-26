@@ -235,7 +235,6 @@ const handleUpdateItem = (item) => {
         )}
 
         <div style={styles.card}>
-            <h3 style={styles.sectionTitle}>Messages</h3>
             <Messages
               activeUserId={user?.user.userid}
             />
