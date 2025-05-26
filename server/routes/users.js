@@ -27,6 +27,7 @@ router.post('/', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
 // GET user by ID
 router.get('/:userId', async (req, res) => {
   try {
@@ -37,6 +38,47 @@ router.get('/:userId', async (req, res) => {
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
+  }
+});
+
+router.delete("/:id", async (req, res) => {
+  const { id } = req.params;
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const itemRes = await client.query(
+      "SELECT itemid FROM Items WHERE userid = $1",
+      [id]
+    );
+    const itemIds = itemRes.rows.map((row) => row.itemid);
+
+    // delete users items bids first
+    if (itemIds.length > 0) {
+      await client.query(
+        "DELETE FROM Bids WHERE itemid = ANY($1::int[])",
+        [itemIds]
+      );
+    }
+
+    // Delete user-related data in the correct order to maintain referential integrity
+    await client.query("DELETE FROM Bids WHERE userid = $1", [id]);
+    await client.query("DELETE FROM Transactions WHERE buyerid = $1 OR sellerid = $1", [id]);
+    await client.query("DELETE FROM Items WHERE userid = $1", [id]);
+    await client.query("DELETE FROM Students WHERE userid = $1", [id]);
+    await client.query("DELETE FROM VirtualCurrency WHERE userid = $1", [id]);
+    await client.query("DELETE FROM Messages WHERE senderid = $1 OR receiverid = $1", [id]);
+    await client.query("DELETE FROM Users WHERE userid = $1", [id]);
+
+    await client.query("COMMIT");
+    res.json({ message: "User and related data deleted successfully." });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error deleting user:", error);
+    res.status(500).json({ error: "Failed to delete user." });
+  } finally {
+    client.release();
   }
 });
 

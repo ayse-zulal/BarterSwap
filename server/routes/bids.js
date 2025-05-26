@@ -57,6 +57,81 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.delete("/:bidId", async (req, res) => {
+  const { bidId } = req.params;
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    // Take our bid
+    const bidResult = await client.query(
+      "SELECT * FROM Bids WHERE bidId = $1",
+      [bidId]
+    );
+    if (bidResult.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Bid not found." });
+    }
+    const bid = bidResult.rows[0];
+
+    // Get the associated item information
+    const itemResult = await client.query(
+      "SELECT currentprice, startingprice FROM Items WHERE itemId = $1",
+      [bid.itemid]
+    );
+    if (itemResult.rowCount === 0) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ error: "Associated item not found." });
+    }
+
+    // Get all other bids (except this one), find the highest bid
+    const otherBidsResult = await client.query(
+      `
+      SELECT bidamount FROM Bids 
+      WHERE itemId = $1 AND bidId != $2 
+      ORDER BY bidamount DESC 
+      LIMIT 1
+      `,
+      [bid.itemid, bidId]
+    );
+
+    let newPrice;
+    if (otherBidsResult.rowCount > 0) {
+      newPrice = otherBidsResult.rows[0].bidamount;
+    } else {
+      // If there are no other bids, reset to starting price
+      newPrice = itemResult.rows[0].startingprice;
+    }
+
+    // Update the item's current price
+    await client.query(
+      "UPDATE Items SET currentprice = $1 WHERE itemId = $2",
+      [newPrice, bid.itemid]
+    );
+
+    // Delete the bid
+    const deleteResult = await client.query(
+      "DELETE FROM Bids WHERE bidId = $1 RETURNING *",
+      [bidId]
+    );
+
+    await client.query("COMMIT");
+    res.json({
+      message: "Bid deleted successfully and current price updated.",
+      deleted: deleteResult.rows[0],
+      updatedCurrentPrice: newPrice
+    });
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Error deleting bid transactionally:", err);
+    res.status(500).json({ error: "Internal server error." });
+  } finally {
+    client.release();
+  }
+});
+
+
 router.get('/item/:itemId', async (req, res) => {
   try {
     const { itemId } = req.params;
@@ -73,6 +148,7 @@ router.get('/item/:itemId', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
 router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -90,6 +166,7 @@ router.get('/user/:userId', async (req, res) => {
         b.*, 
         i.title AS itemname, 
         i.image AS itemimage,
+        i.isactive,
         CASE 
           WHEN t.transactionid IS NOT NULL AND b.bidamount = uhb.highest_bid THEN TRUE
           ELSE FALSE
@@ -102,6 +179,7 @@ router.get('/user/:userId', async (req, res) => {
         ON t.itemid = b.itemid AND t.buyerid = b.userid
       WHERE b.userid = $1
       ORDER BY b.bidid DESC;
+
       `,
       [userId]
     );

@@ -33,6 +33,7 @@ const useAuthStore = create((set) => ({
       set({ user: null, isAuthenticated: false });
     }
   },
+  setUser: (updatedUser) => set({ user: updatedUser }),
 
   logout: () => {
     localStorage.removeItem("token");

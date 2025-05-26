@@ -39,15 +39,31 @@ router.get('/available', async (req, res) => {
   }
 });
 
-
 router.get('/:itemId', async (req, res) => {
   try {
     const { itemId } = req.params;
-    const result = await pool.query('SELECT * FROM Items WHERE itemId = $1', [itemId]);
-    if (result.rows.length === 0) return res.status(404).send('Item not found');
+
+    const result = await pool.query(
+      `
+      SELECT 
+        i.*, 
+        s.studentid, 
+        s.studentname, 
+        s.email
+      FROM Items i
+      JOIN Students s ON i.userid = s.userid
+      WHERE i.itemid = $1
+      `,
+      [itemId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).send('Item not found');
+    }
+
     res.json(result.rows[0]);
   } catch (err) {
-    console.error(err.message);
+    console.error("Error fetching item with owner info:", err.message);
     res.status(500).send('Server error');
   }
 });
@@ -158,6 +174,30 @@ router.put("/:itemId/mark-sold", async (req, res) => {
   }
 });
 
+router.put("/:itemId", async (req, res) => {
+  const { itemId } = req.params;
+  const { title, category, itemcondition, image } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE Items 
+       SET title = $1, category = $2, itemcondition = $3, image = $4
+       WHERE itemId = $5
+       RETURNING *`,
+      [title, category, itemcondition, image, itemId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: "Item not found" });
+    }
+
+    res.json({ message: "Item updated", item: result.rows[0] });
+  } catch (err) {
+    console.error("Error updating item:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -227,5 +267,30 @@ router.post('/', async (req, res) => {
   }
 });
 
+router.delete("/:itemid", async (req, res) => {
+  const { itemid } = req.params;
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      await client.query(
+        "DELETE FROM Bids WHERE itemid = $1",
+        [itemid]
+      );
+
+    await client.query("DELETE FROM Transactions WHERE itemid = $1", [itemid]);
+    await client.query("DELETE FROM Items WHERE itemid = $1", [itemid]);
+
+    await client.query("COMMIT");
+    res.json({ message: "Item and related data deleted successfully." });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error deleting item:", error);
+    res.status(500).json({ error: "Failed to delete item." });
+  } finally {
+    client.release();
+  }
+});
 
 module.exports = router;

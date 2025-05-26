@@ -4,15 +4,22 @@ import useAuthStore from '../store/AuthStore.ts';
 import Messages from "../components/Messages.jsx";
 import BidFilters from "../components/BidFilters.jsx";
 import ItemFilters from "../components/ItemFilters.jsx";
+
 const UserPage = () => {
   const user = useAuthStore(state => state.user);
   const purchasedItems = useAuthStore(state => state.purchasedItems);
   const userItems = useAuthStore(state => state.userItems);
   const bids = useAuthStore(state => state.bids);
+  const setUser = useAuthStore(state => state.setUser);
+  const fetchUser = useAuthStore(state => state.fetchUser);
   const [filteredBids, setFilteredBids] = useState([]);
   const [filteredItems, setFilteredItems] = useState([]);
   const [filteredPurchasedItems, setFilteredPurchasedItems] = useState(purchasedItems);
-
+  const [visibleCountItems, setVisibleCountItems] = useState(20);
+  const [visibleCountPurchase, setVisibleCountPurchase] = useState(20);
+  const [visibleCountBids, setVisibleCountBids] = useState(20);
+  const [editedName, setEditedName] = useState(user?.student.studentname);
+  const [editedEmail, setEditedEmail] = useState(user?.student.email);
   const [newItem, setNewItem] = useState({ userId: 0, title: "", description: "", startingPrice: 0, currentPrice: 0, image: "", category: "", itemCondition: "", isActive: false, isRefunded: false });
 
   const handleItemCreate = async (e) => {
@@ -31,11 +38,102 @@ const UserPage = () => {
     }
   };
 
+  const [editingItem, setEditingItem] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editCategory, setEditCategory] = useState("");
+  const [editCondition, setEditCondition] = useState("");
+  const [editImage, setEditImage] = useState("");
+
+const handleUpdateItem = (item) => {
+  setEditingItem(item);
+  setEditTitle(item.title);
+  setEditCategory(item.category);
+  setEditCondition(item.itemcondition);
+  setEditImage(item.image);
+};
+
   useEffect(() => {
-  setFilteredBids(bids);
-  setFilteredItems(userItems);
-  setFilteredPurchasedItems(purchasedItems);
-  }, [bids, userItems, purchasedItems]);
+    setFilteredBids(bids);
+    setFilteredItems(userItems);
+    setFilteredPurchasedItems(purchasedItems);
+    setEditedName(user?.student.studentname || "");
+    setEditedEmail(user?.student.email || "");
+  }, [bids, userItems, purchasedItems, user ?? null]);
+
+  const handleDeleteBid = async (bidId) => {
+    if (!window.confirm("Are you sure you want to delete this bid?")) return;
+
+    try {
+      await axios.delete(`http://localhost:5000/api/bids/${bidId}`);
+      setFilteredBids((prev) => prev.filter((bid) => bid.bidid !== bidId));
+    } catch (err) {
+      console.error("Failed to delete bid", err);
+      alert("Failed to delete bid.");
+    }
+  };
+
+  const handleDeleteItem = async (itemId) => {
+    const confirmDelete = window.confirm("Are you sure you want to delete this item?");
+    if (!confirmDelete) return;
+
+    try {
+      await axios.delete(`http://localhost:5000/api/items/${itemId}`);
+      await fetchUser(); 
+    } catch (err) {
+      console.error("Error deleting item:", err);
+      alert("Could not delete item.");
+    }
+  };
+
+  const handleUpdate = async () => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/students/${user?.student.studentid}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          studentname: editedName,
+          email: editedEmail
+        })
+      });
+
+      if (res.ok) {
+        const updated = await res.json();
+        alert("Info updated successfully!");
+
+        setUser({
+          ...user,
+          student: {
+            ...user?.student,
+            studentname: updated.studentname,
+            email: updated.email
+          }
+        });
+      } else {
+        alert("Update failed.");
+      }
+    } catch (error) {
+      console.error("Error updating user info:", error);
+      alert("An error occurred.");
+    }
+  };
+
+  const handleDeleteProfile = async () => {
+    const confirmed = window.confirm("Are you sure you want to delete your profile? This cannot be undone.");
+
+    if (!confirmed || !user) return;
+
+    try {
+      await axios.delete(`http://localhost:5000/api/users/${user.user.userid}`);
+      alert("Profile deleted successfully.");
+      useAuthStore.getState().logout(); 
+      window.location.href = "/"; 
+    } catch (err) {
+      console.error("Failed to delete profile", err);
+      alert("An error occurred while deleting your profile.");
+    }
+  };
 
   const applyBidFilters = ({ minPrice, maxPrice, wonOnly, name }) => {
   let filtered = [...bids];
@@ -50,7 +148,6 @@ const UserPage = () => {
 
   const applyItemFilters = ({ minPrice, maxPrice, date, name, type }) => {
     let filtered = type ? [...purchasedItems] : [...userItems];
-    console.log(date);
     if(type) {
       if (minPrice) filtered = filtered.filter(b => b.price >= parseFloat(minPrice));
       if (maxPrice) filtered = filtered.filter(b => b.price <= parseFloat(maxPrice));
@@ -83,12 +180,60 @@ const UserPage = () => {
         {user && (
           <div style={styles.card}>
             <h3 style={styles.sectionTitle}>Your Info</h3>
+
             <p><strong>Student Id:</strong> {user.student.studentid}</p>
-            <p><strong>Student Name:</strong> {user.student.studentname}</p>
-            <p><strong>Email:</strong> {user.student.email}</p>
+
+            <div style={{ marginTop: "1rem" }}>
+              <label><strong>Name:</strong></label>
+              <input
+                type="text"
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                style={{ padding: "0.4rem", width: "100%", marginBottom: "0.5rem", borderRadius: "6px" }}
+              />
+
+              <label><strong>Email:</strong></label>
+              <input
+                type="email"
+                value={editedEmail}
+                onChange={(e) => setEditedEmail(e.target.value)}
+                style={{ padding: "0.4rem", width: "100%", marginBottom: "0.5rem", borderRadius: "6px" }}
+              />
+
+              <button
+                onClick={handleUpdate}
+                style={{
+                  padding: "0.5rem 1rem",
+                  backgroundColor: "#8fbc8f",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "6px",
+                  cursor: "pointer"
+                }}
+              >
+                Update Info
+              </button>
+              <button
+                onClick={handleDeleteProfile}
+                style={{
+                  backgroundColor: "#dd7171",
+                  color: "white",
+                  padding: "0.5rem 1rem",
+                  borderRadius: "6px",
+                  border: "none",
+                  cursor: "pointer",
+                  marginTop: "1rem",
+                  marginLeft: "0.5rem"
+                }}
+              >
+                Delete My Profile
+              </button>
+            </div>
+
             <p><strong>Balance:</strong> {user.balance.balance} coins</p>
           </div>
         )}
+
         <div style={styles.card}>
             <h3 style={styles.sectionTitle}>Messages</h3>
             <Messages
@@ -184,18 +329,22 @@ const UserPage = () => {
         </div>
 
         <div style={styles.card}>
+          { /* User Bids Section */}
           <h3 style={{ marginBottom: '1rem' }}>Bids</h3>
           <BidFilters onApply={applyBidFilters} />
           {filteredBids?.length > 0 ? (
-            <table style={styles2.table}>
+            <div style={{ marginBottom: '1rem' }}>
+              <table style={styles2.table}>
               <thead style={styles2.thead}>
                 <tr>
                   <th style={styles2.th}>Item</th>
                   <th style={styles2.th}>Amount</th>
+                  <th style={styles2.th}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredBids
+                  .slice(0, visibleCountBids)
                   .sort((a, b) => b.amount - a.amount)
                   .map((bid, index) => (
                     <tr
@@ -204,29 +353,231 @@ const UserPage = () => {
                     >
                       <td style={styles2.td}>{bid.itemname}</td>
                       <td style={styles2.td}>{bid.bidamount} coins</td>
+                      <td style={styles2.td}>
+                        {bid.isactive && (
+                          <button
+                            onClick={() => handleDeleteBid(bid.bidid)}
+                            style={{
+                              padding: "0.3rem 0.6rem",
+                              backgroundColor: "#dd7171",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "6px",
+                              cursor: "pointer",
+                              fontSize: "12px"
+                            }}
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
               </tbody>
             </table>
+            {visibleCountBids < filteredBids.length && (
+                <div style={{ textAlign: "center", marginTop: "1rem" }}>
+                  <button
+                    onClick={() => setVisibleCountBids(visibleCountBids + 20)}
+                    style={{
+                      padding: '0.6rem 1.2rem',
+                      backgroundColor: '#8fbc8f',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Show More
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <p style={styles2.noBids}>You haven't placed any bids fitting your filters.</p>
           )}
 
+          { /* User Items and Purchased Items Section */}
           <h3 style={{ ...styles.sectionTitle, marginTop: '2rem' }}>Your Items</h3>
           <ItemFilters onApply={applyItemFilters} type={false} />
           {filteredItems?.length > 0 ? (
             <div style={styles.cardGrid}>
-              {filteredItems.map((item) => (
-                <div key={item.itemid} style={styles.itemCard} onClick={() => window.location.href = `/items/${item.itemid}`}>
-                  <img src={item.image} alt={item.title} style={styles.itemImage} />
+              {filteredItems.slice(0, visibleCountItems).map((item) => (
+                <div key={item.itemid} style={styles.itemCard}>
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    style={styles.itemImage}
+                    onClick={() => window.location.href = `/items/${item.itemid}`}
+                  />
                   <div style={styles.itemInfo}>
                     <h4 style={styles.itemTitle}>{item.title}</h4>
                     <p style={styles.itemDetail}><strong>Category:</strong> {item.category}</p>
                     <p style={styles.itemDetail}><strong>Current Price:</strong> {item.currentprice} coins</p>
                     <p style={styles.itemDetail}><strong>Condition:</strong> {item.itemcondition}</p>
                   </div>
+                   {/* update and delete items */}
+                  <div style={{ marginTop: "0.5rem", display: "flex", gap: "8px", justifyContent: "center" }}>
+                    <button
+                      onClick={() => handleUpdateItem(item)}
+                      style={{
+                        padding: '0.4rem 0.8rem',
+                        backgroundColor: '#6495ed',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        marginBottom: '0.5rem'
+                      }}
+                    >
+                      Update
+                    </button>
+                    <button
+                      onClick={() => handleDeleteItem(item.itemid)}
+                      style={{
+                        padding: '0.4rem 0.8rem',
+                        backgroundColor: '#dd7171',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        marginBottom: '0.5rem'
+                      }}
+                    >
+                      Delete
+                    </button>
+                    {editingItem && (
+                      <div style={{
+                        position: "fixed",
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: "rgba(0,0,0,0.5)",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        zIndex: 1000
+                      }}>
+                        <div style={{
+                          backgroundColor: "white",
+                          padding: "2rem",
+                          borderRadius: "10px",
+                          width: "400px",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "1rem"
+                        }}>
+                          <h3>Update Item</h3>
+
+                          <input
+                            type="text"
+                            value={editTitle}
+                            style={{padding: "0.5rem", backgroundColor: '#f0efd9', border: 'none', borderRadius: '8px', cursor: 'pointer'}}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            placeholder="Title"
+                          />
+                          <select
+                            value={editCategory}
+                            style={{padding: "0.5rem", backgroundColor: '#f0efd9', border: 'none', borderRadius: '8px', cursor: 'pointer'}}
+                            onChange={(e) => setEditCategory(e.target.value)}
+                            required
+                          >
+                            <option value="">Select Category</option>
+                            <option value="electronics">Electronics</option>
+                            <option value="books">Books</option>
+                            <option value="fashion">Clothing</option>
+                            <option value="furniture">Furniture</option>
+                            <option value="home">Home</option>
+                            <option value="beauty">Beauty Products</option>
+                            <option value="other">Other</option>
+                          </select>
+
+                          <select
+                            value={editCondition}
+                            style={{padding: "0.5rem", backgroundColor: '#f0efd9', border: 'none', borderRadius: '8px', cursor: 'pointer'}}
+                            onChange={(e) => setEditCondition(e.target.value)}
+                            required
+                          >
+                            <option value="">Select Condition</option>
+                            <option value="New">New</option>
+                            <option value="Used - Like New">Used - Like New</option>
+                            <option value="Used - Good">Used - Good</option>
+                            <option value="Used - Acceptable">Used - Acceptable</option>
+                          </select>
+
+                          <input
+                            type="text"
+                            value={editImage}
+                            style={{padding: "0.5rem", backgroundColor: '#f0efd9', border: 'none', borderRadius: '8px', cursor: 'pointer'}}
+                            onChange={(e) => setEditImage(e.target.value)}
+                            placeholder="Image URL"
+                          />
+
+                          <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+                            <button onClick={() => setEditingItem(null)} style={{
+                              marginTop: '0.5rem',
+                              padding: '0.6rem 1.2rem',
+                              backgroundColor: '#dd7171',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '8px',
+                              cursor: 'pointer',
+                            }}>
+                              Cancel
+                            </button>
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await axios.put(`http://localhost:5000/api/items/${editingItem.itemid}`, {
+                                    title: editTitle,
+                                    category: editCategory,
+                                    itemcondition: editCondition,
+                                    image: editImage
+                                  });
+                                  setEditingItem(null);
+                                  fetchUser();
+                                } catch (err) {
+                                  console.error("Update error:", err);
+                                  alert("Update failed");
+                                }
+                              }}
+                              style={{
+                                marginTop: '0.5rem',
+                                padding: '0.6rem 1.2rem',
+                                backgroundColor: '#8fbc8f',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Save
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
+
+              {visibleCountItems < filteredItems.length && (
+                <div style={{ textAlign: "center", marginTop: "1rem" }}>
+                  <button
+                    onClick={() => setVisibleCountItems(visibleCountItems + 20)}
+                    style={{
+                      padding: '0.6rem 1.2rem',
+                      backgroundColor: '#8fbc8f',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Show More
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <p>You haven't listed any items yet.</p>
@@ -236,7 +587,7 @@ const UserPage = () => {
           <ItemFilters onApply={applyItemFilters} type={true} />
           {filteredPurchasedItems.length > 0 ? (
             <div style={styles.cardGrid}>
-              {filteredPurchasedItems.map((item) => (
+              {filteredPurchasedItems.slice(0, visibleCountPurchase).map((item) => (
                 <div key={item.itemid} style={styles.itemCard} onClick={() => window.location.href = `/items/${item.itemid}`}>
                   <img src={item.image} alt={item.item_title} style={styles.itemImage} />
                   <div style={styles.itemInfo}>
@@ -248,6 +599,23 @@ const UserPage = () => {
                   </div>
                 </div>
               ))}
+              {visibleCountPurchase < filteredPurchasedItems.length && (
+                <div style={{ textAlign: "center", marginTop: "1rem" }}>
+                  <button
+                    onClick={() => setVisibleCountPurchase(visibleCountPurchase + 20)}
+                    style={{
+                      padding: '0.6rem 1.2rem',
+                      backgroundColor: '#8fbc8f',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Show More
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <p>You haven't purchased any items yet.</p>
