@@ -1,10 +1,14 @@
 import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import useAuthStore from '../store/AuthStore.ts'; 
+
 const LoginPage = () => {
   const [studentId, setStudentId] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
+  const fetchUser = useAuthStore(state => state.fetchUser);
+
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -15,8 +19,8 @@ const LoginPage = () => {
         password
       });
 
-      console.log("Login successful:", res.data);
       localStorage.setItem("token", res.data.token);
+      fetchUser();
       navigate("/");
 
     } catch (err) {

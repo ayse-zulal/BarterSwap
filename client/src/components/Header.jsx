@@ -3,7 +3,7 @@ import logo from '../assets/logo.png';
 import React, { useState, useEffect } from 'react';
 import useItemStore from '../store/ItemStore.ts'; 
 import useAuthStore from '../store/AuthStore.ts'; 
-
+import { useNavigate } from 'react-router-dom';
 const Header = () => {
   const [search, setSearch] = useState("");
   const logout = useAuthStore(state => state.logout);
@@ -11,6 +11,7 @@ const Header = () => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const filterItems = useItemStore(state => state.filterItems);
   const fetchItems = useItemStore(state => state.fetchItems);
+  const navigate = useNavigate();
 
 useEffect(() => {
   if (search.trim() === "") fetchItems();
@@ -58,7 +59,7 @@ useEffect(() => {
         <>
           <span>Welcome, {user?.student.studentname}</span>
           <Link to="/user" style={{ color: 'white', textDecoration: 'none' }}>User Page</Link>
-          <button onClick={logout} style={{backgroundColor: '#f0efd9', color: '#C3b091', padding: '10px 20px',border: 'none',borderRadius: '6px',cursor: 'pointer',fontWeight: 'bold',transition: 'background-color 0.3s ease'}}>Logout</button>
+          <button onClick={() => { logout(); navigate("/login"); }} style={{backgroundColor: '#f0efd9', color: '#C3b091', padding: '10px 20px',border: 'none',borderRadius: '6px',cursor: 'pointer',fontWeight: 'bold',transition: 'background-color 0.3s ease'}}>Logout</button>
         </>
       ) : (
         <>

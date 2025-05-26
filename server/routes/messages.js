@@ -18,19 +18,26 @@ router.get("/:userId", async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
-        m.*,
+      m.*,
+      CASE 
+        WHEN m.senderid = $1 THEN m.receiverid
+        ELSE m.senderid
+      END AS partnerid,
+      s.studentname AS partnername
+      FROM Messages m
+      JOIN Students s ON s.userid = (
         CASE 
           WHEN m.senderid = $1 THEN m.receiverid
           ELSE m.senderid
-        END AS chat_partner_id
-      FROM Messages m
+        END
+      )
       WHERE m.senderid = $1 OR m.receiverid = $1
-      ORDER BY chat_partner_id, m.timestamp DESC;
+      ORDER BY partnerid, m.timestamp DESC;
     `, [userId]);
 
     const messagesByPartner = {};
     for (let row of result.rows) {
-      const partnerId = row.chat_partner_id;
+      const partnerId = row.partnerid;
       if (!messagesByPartner[partnerId]) {
         messagesByPartner[partnerId] = [];
       }
@@ -47,10 +54,10 @@ router.get("/:userId", async (req, res) => {
 // POST create a new message
 router.post('/', async (req, res) => {
   try {
-    const { senderId, receiverId, content, isRead, timeStamp } = req.body;
+    const { senderId, receiverId, content, isRead } = req.body;
     const newMessage = await pool.query(
       'INSERT INTO Messages (senderId, receiverId, content, isRead, timeStamp) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [senderId, receiverId, content, isRead, timeStamp]
+      [senderId, receiverId, content, isRead, new Date()]
     );
     res.json(newMessage.rows[0]);
   } catch (err) {

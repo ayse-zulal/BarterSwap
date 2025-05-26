@@ -141,8 +141,8 @@ router.put("/:itemId/mark-sold", async (req, res) => {
 
     // Mark item as sold
     await client.query(
-      `UPDATE items SET isactive = FALSE, userid = $1 WHERE itemid = $2`,
-      [highestBid.buyer_id, itemId]
+      `UPDATE items SET isactive = FALSE WHERE itemid = $1`,
+      [itemId]
     );
 
     await client.query("COMMIT");

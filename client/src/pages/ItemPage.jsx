@@ -6,6 +6,7 @@ import available from '../assets/available.png';
 import notAvailable from '../assets/not available.png';
 import refunded from '../assets/refunded.png';
 import notRefunded from '../assets/not refunded.png';
+import useAuthStore from '../store/AuthStore.ts'; 
 
 const styles = {
   table: {
@@ -43,29 +44,36 @@ const styles = {
   },
 };
 
-const ItemPage = ({ currentUser }) => {
-  const [userId, setUserId] = useState(null);
-  const [user, setUser] = useState(null);
+const ItemPage = () => {
+    const user = useAuthStore(state => state.user);
+
   const { itemId } = useParams();
   const [item, setItem] = useState(null);
   const [bids, setBids] = useState([]);
   const [newBidAmount, setNewBidAmount] = useState('');
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const res = await axios.get("http://localhost:5000/api/auth/me", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
-        });
-        const userData = await axios.get(`http://localhost:5000/api/users/${res.data.userId}`);
-        setUserId(res.data.userId);
-        setUser(userData.data);
-      } catch (err) {
-        console.error("User fetch failed:", err);
-      }
+  const [messageToOwner, setMessageToOwner] = useState("");
+
+const handleMessageOwner = async (e) => {
+  e.preventDefault();
+  try {
+    const messagePayload = {
+      senderId: user.user.userid,
+      receiverId: item.userid,
+      content: messageToOwner,
+      isRead: false,
     };
 
-    fetchUserData();
-  }, []);
+    await axios.post("http://localhost:5000/api/messages", messagePayload);
+
+    alert("Message sent to the item owner!");
+    setMessageToOwner("");
+  } catch (err) {
+    console.error("Failed to send message:", err);
+    alert("Failed to send message");
+  }
+};
+
+  
   useEffect(() => {
     const fetchItem = async () => {
       try {
@@ -109,7 +117,7 @@ const ItemPage = ({ currentUser }) => {
     try {
       await axios.post('http://localhost:5000/api/bids', {
         itemId,
-        userId: userId,
+        userId: user.user.userid,
         bidAmount: newBidAmount,
       });
       setNewBidAmount('');
@@ -122,8 +130,7 @@ const ItemPage = ({ currentUser }) => {
 
   if (!item) return <div>Loading item...</div>;
 
-  const isOwner = item.userid === userId;
-  console.log("userrr",user)
+  const isOwner = item.userid === user?.user.userid;
 
   return (
     <div style={{ padding: '2rem', display: 'flex', justifyContent: 'center',  minHeight: '100vh' }}>
@@ -233,7 +240,41 @@ const ItemPage = ({ currentUser }) => {
                   Submit Bid
                 </button>
               </form>
+              <div style={{ marginTop: '2rem' }}>
+                <h4 style={{ marginBottom: '0.5rem' }}>Message Owner</h4>
+                <form onSubmit={handleMessageOwner}>
+                  <textarea
+                    value={messageToOwner}
+                    onChange={(e) => setMessageToOwner(e.target.value)}
+                    placeholder="Write a message to the item owner..."
+                    style={{
+                      width: '100%',
+                      height: '80px',
+                      padding: '0.6rem',
+                      borderRadius: '6px',
+                      border: '1px solid #ccc',
+                      resize: 'none'
+                    }}
+                    required
+                  />
+                  <button
+                    type="submit"
+                    style={{
+                      marginTop: '0.5rem',
+                      padding: '0.6rem 1.2rem',
+                      backgroundColor: '#8fbc8f',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Send Message
+                  </button>
+                </form>
+              </div>
             </div>
+            
             
           )
         )}

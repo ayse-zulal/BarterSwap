@@ -1,14 +1,12 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import useAuthStore from '../store/AuthStore.ts'; 
-
+import Messages from "../components/Messages.jsx";
 const UserPage = () => {
   const user = useAuthStore(state => state.user);
   const purchasedItems = useAuthStore(state => state.purchasedItems);
   const userItems = useAuthStore(state => state.userItems);
   const bids = useAuthStore(state => state.bids);
-  const messages = useAuthStore(state => state.messages);
-  console.log(messages)
 
   const [newItem, setNewItem] = useState({ userId: 0, title: "", description: "", startingPrice: 0, currentPrice: 0, image: "", category: "", itemCondition: "", isActive: false, isRefunded: false });
 
@@ -43,7 +41,9 @@ const UserPage = () => {
         )}
         <div style={styles.card}>
             <h3 style={styles.sectionTitle}>Messages</h3>
-            
+            <Messages
+              activeUserId={user?.user.userid}
+            />
           </div>
       </div>
 
@@ -205,6 +205,7 @@ const UserPage = () => {
 
   );
 };
+
 const layoutStyles = {
   container: {
     display: 'flex',
@@ -223,7 +224,6 @@ const layoutStyles = {
     minWidth: '250px',
   },
 };
-
 const styles2 = {
   table: {
     width: '100%',
@@ -311,7 +311,7 @@ const styles = {
   },
   button: {
     padding: '0.75rem',
-    backgroundColor: '#dcf7d0',
+    backgroundColor: '#8fbc8f',
     color: 'white',
     fontWeight: '600',
     borderRadius: '6px',
