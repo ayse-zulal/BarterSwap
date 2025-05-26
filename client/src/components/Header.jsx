@@ -13,11 +13,10 @@ const Header = () => {
   const fetchItems = useItemStore(state => state.fetchItems);
   const navigate = useNavigate();
 
-useEffect(() => {
-  if (search.trim() === "") fetchItems();
-
-  filterItems(search);
-}, [search]);
+  useEffect(() => {
+    if (search.trim() === "") fetchItems();
+    filterItems(search);
+  }, [search]);
 
 
   return (

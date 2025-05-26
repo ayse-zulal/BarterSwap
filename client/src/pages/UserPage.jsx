@@ -2,11 +2,15 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import useAuthStore from '../store/AuthStore.ts'; 
 import Messages from "../components/Messages.jsx";
+import BidFilters from "../components/BidFilters.jsx";
+import ItemFilters from "../components/ItemFilters.jsx";
 const UserPage = () => {
   const user = useAuthStore(state => state.user);
   const purchasedItems = useAuthStore(state => state.purchasedItems);
   const userItems = useAuthStore(state => state.userItems);
   const bids = useAuthStore(state => state.bids);
+  const [filteredBids, setFilteredBids] = useState([]);
+  const [filteredItems, setFilteredItems] = useState([]);
 
   const [newItem, setNewItem] = useState({ userId: 0, title: "", description: "", startingPrice: 0, currentPrice: 0, image: "", category: "", itemCondition: "", isActive: false, isRefunded: false });
 
@@ -26,10 +30,36 @@ const UserPage = () => {
     }
   };
 
+  useEffect(() => {
+  setFilteredBids(bids);
+  setFilteredItems(userItems);
+  }, [bids, userItems]);
+
+  const applyBidFilters = ({ minPrice, maxPrice, wonOnly, name }) => {
+  let filtered = [...bids];
+
+  if (minPrice) filtered = filtered.filter(b => b.bidamount >= parseFloat(minPrice));
+  if (maxPrice) filtered = filtered.filter(b => b.bidamount <= parseFloat(maxPrice));
+  if (wonOnly) filtered = filtered.filter(b => b.didwin === true);
+  if (name) filtered = filtered.filter(b => b.itemname.toLowerCase().includes(name.toLowerCase()));
+
+  setFilteredBids(filtered);
+  };
+  const applyItemFilters = ({ minPrice, maxPrice, date, name }) => {
+  let filtered = [...userItems];
+  console.log(userItems);
+
+  if (minPrice) filtered = filtered.filter(b => b.currentPrice >= parseFloat(minPrice));
+  if (maxPrice) filtered = filtered.filter(b => b.currentPrice <= parseFloat(maxPrice));
+  if (date) filtered = filtered.filter(b => b.purchaseDate === date);
+  if (name) filtered = filtered.filter(b => b.title.toLowerCase().includes(name.toLowerCase()));
+
+  setFilteredItems(filtered);
+  };
+
   return (
    <div style={layoutStyles.container}>
       <div style={layoutStyles.leftColumn}>
-        
         {user && (
           <div style={styles.card}>
             <h3 style={styles.sectionTitle}>Your Info</h3>
@@ -135,7 +165,8 @@ const UserPage = () => {
 
         <div style={styles.card}>
           <h3 style={{ marginBottom: '1rem' }}>Bids</h3>
-          {bids?.length > 0 ? (
+          <BidFilters onApply={applyBidFilters} />
+          {filteredBids?.length > 0 ? (
             <table style={styles2.table}>
               <thead style={styles2.thead}>
                 <tr>
@@ -144,7 +175,7 @@ const UserPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {bids
+                {filteredBids
                   .sort((a, b) => b.amount - a.amount)
                   .map((bid, index) => (
                     <tr
@@ -158,19 +189,20 @@ const UserPage = () => {
               </tbody>
             </table>
           ) : (
-            <p style={styles2.noBids}>You haven't placed any bids yet.</p>
+            <p style={styles2.noBids}>You haven't placed any bids fitting your filters.</p>
           )}
 
           <h3 style={{ ...styles.sectionTitle, marginTop: '2rem' }}>Your Items</h3>
-          {userItems?.length > 0 ? (
+          <ItemFilters onApply={applyItemFilters} />
+          {filteredItems?.length > 0 ? (
             <div style={styles.cardGrid}>
-              {userItems.map((item) => (
+              {filteredItems.map((item) => (
                 <div key={item.itemid} style={styles.itemCard} onClick={() => window.location.href = `/items/${item.itemid}`}>
                   <img src={item.image} alt={item.title} style={styles.itemImage} />
                   <div style={styles.itemInfo}>
                     <h4 style={styles.itemTitle}>{item.title}</h4>
                     <p style={styles.itemDetail}><strong>Category:</strong> {item.category}</p>
-                    <p style={styles.itemDetail}><strong>Price:</strong> {item.currentprice} coins</p>
+                    <p style={styles.itemDetail}><strong>Current Price:</strong> {item.currentprice} coins</p>
                     <p style={styles.itemDetail}><strong>Condition:</strong> {item.itemcondition}</p>
                   </div>
                 </div>

@@ -77,11 +77,32 @@ router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const bids = await pool.query(
-      `SELECT b.*, i.title AS itemname, i.image AS itemimage
-       FROM Bids b
-       JOIN Items i ON b.itemId = i.itemId
-       WHERE b.userId = $1
-       ORDER BY b.bidid DESC`,
+      `WITH UserHighestBids AS (
+      SELECT 
+        b.itemid,
+        b.userid,
+        MAX(b.bidamount) AS highest_bid
+      FROM Bids b
+      GROUP BY b.itemid, b.userid
+      )
+
+      SELECT 
+        b.*, 
+        i.title AS itemname, 
+        i.image AS itemimage,
+        CASE 
+          WHEN t.transactionid IS NOT NULL AND b.bidamount = uhb.highest_bid THEN TRUE
+          ELSE FALSE
+        END AS didwin
+      FROM Bids b
+      JOIN Items i ON b.itemid = i.itemid
+      LEFT JOIN UserHighestBids uhb 
+        ON b.itemid = uhb.itemid AND b.userid = uhb.userid
+      LEFT JOIN Transactions t 
+        ON t.itemid = b.itemid AND t.buyerid = b.userid
+      WHERE b.userid = $1
+      ORDER BY b.bidid DESC;
+      `,
       [userId]
     );
     res.json(bids.rows);
