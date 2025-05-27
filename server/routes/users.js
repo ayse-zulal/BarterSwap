@@ -5,13 +5,27 @@ const authMiddleware = require('../middleware/auth');
 // GET all users
 router.get('/', async (req, res) => {
   try {
-    const users = await pool.query('SELECT * FROM Users');
-    res.json(users.rows);
+    const query = `
+      SELECT 
+        u.*,
+        s.studentname,
+        s.email,
+        s.studentid,
+        vc.balance
+      FROM Users u
+      LEFT JOIN Students s ON u.userid = s.userid
+      LEFT JOIN VirtualCurrency vc ON u.userid = vc.userid
+      WHERE u.userid != 0
+    `;
+
+    const result = await pool.query(query);
+    res.json(result.rows);
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server error');
   }
 });
+
 
 // POST create a new user
 router.post('/', async (req, res) => {

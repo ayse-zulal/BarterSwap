@@ -2,7 +2,43 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
-// GET all items
+// GET all available items
+router.get('/', async (req, res) => {
+  try {
+    const itemsResult = await pool.query('SELECT * FROM Items');
+    const items = itemsResult.rows;
+
+    if (items.length === 0) {
+      return res.json([]);
+    }
+
+    const bidsResult = await pool.query(
+      'SELECT * FROM Bids WHERE itemid = ANY($1)',
+      [items.map(item => item.itemid)]
+    );
+
+    const bids = bidsResult.rows;
+
+    const itemIdToBids = {};
+    for (const bid of bids) {
+      if (!itemIdToBids[bid.itemid]) {
+        itemIdToBids[bid.itemid] = [];
+      }
+      itemIdToBids[bid.itemid].push(bid);
+    }
+
+    const itemsWithBids = items.map(item => ({
+      ...item,
+      bids: itemIdToBids[item.itemid] || [],
+    }));
+
+    res.json(itemsWithBids);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
 router.get('/available', async (req, res) => {
   try {
     const itemsResult = await pool.query('SELECT * FROM Items WHERE isactive = TRUE');
@@ -49,9 +85,11 @@ router.get('/:itemId', async (req, res) => {
         i.*, 
         s.studentid, 
         s.studentname, 
-        s.email
+        s.email,
+        u.reputation
       FROM Items i
       JOIN Students s ON i.userid = s.userid
+      JOIN Users u ON s.userid = u.userid
       WHERE i.itemid = $1
       `,
       [itemId]

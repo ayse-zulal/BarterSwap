@@ -155,6 +155,7 @@ const handleMessageOwner = async (e) => {
               <p><strong>Owner Student Id:</strong> {item.studentid}</p>
               <p><strong>Owner Name:</strong> {item.studentname}</p>
               <p><strong>Owner Mail:</strong> {item.email}</p>
+              <p><strong>Owner Reputation:</strong> {item.reputation}</p>
             </div>
             {isOwner ? (
               <div style={{ marginTop: '1rem', display:"flex", alignItems:"center", justifyContent:"center" }}>

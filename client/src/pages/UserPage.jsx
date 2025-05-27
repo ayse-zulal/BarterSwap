@@ -96,10 +96,27 @@ const handleUpdateItem = (item) => {
     });
 
     alert("Refund completed successfully!");
-    // Sayfayı güncelle, item listeni refresh et
   } catch (err) {
     console.error("Refund failed:", err.response?.data || err.message);
     alert("Refund failed!");
+  }
+};
+
+const handleFeedback = async (itemId, value) => {
+  try {
+    console.log("Submitting feedback:", value);
+
+    const res = await axios.put(
+  `http://localhost:5000/api/transactions/${itemId}/feedback`,
+  {
+    feedback: value 
+  }
+);
+
+    alert("Feedback submitted successfully!");
+  } catch (err) {
+    console.error("Feedback submission failed:", err.response?.data || err.message);
+    alert("Feedback submission failed!");
   }
 };
 
@@ -250,6 +267,7 @@ const handleUpdateItem = (item) => {
             </div>
 
             <p><strong>Balance:</strong> {user.balance.balance} coins</p>
+            <p><strong>Reputation:</strong> {user.user.reputation} Reputation Point</p>
           </div>
         )}
 
@@ -363,7 +381,7 @@ const handleUpdateItem = (item) => {
               <tbody>
                 {filteredBids
                   .slice(0, visibleCountBids)
-                  .sort((a, b) => b.amount - a.amount)
+                  .sort((a, b) => b.bidamount - a.bidamount)
                   .map((bid, index) => (
                     <tr
                       key={bid.bidid}
@@ -607,8 +625,9 @@ const handleUpdateItem = (item) => {
             <div style={styles.cardGrid}>
               {filteredPurchasedItems.slice(0, visibleCountPurchase).map((item) => (
                 <div key={item.itemid} style={styles.itemCard} >
-                  {console.log(item)}
-                  <img src={item.image} alt={item.item_title} style={styles.itemImage} />
+                  <a href={`/items/${item.itemid}`}>
+                    <img src={item.image} alt={item.item_title} style={styles.itemImage} />
+                  </a>
                   <div style={styles.itemInfo}>
                     <h4 style={styles.itemTitle}>{item.item_title}</h4>
                     <p style={styles.itemDetail}><strong>Category:</strong> {item.category}</p>
@@ -632,6 +651,25 @@ const handleUpdateItem = (item) => {
                     >
                       Refund
                     </button>
+
+                    <select
+                      onChange={(e) => { handleFeedback(item.itemid, e.target.value); fetchUser(); }}
+                      style={{
+                        padding: '0.4rem 0.8rem',
+                        backgroundColor: '#6495ed',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        marginBottom: '0.5rem'
+                      }}
+                    >
+                      <option value="">Give Feedback</option>
+                      <option value="positive">Positive</option>
+                      <option value="neutral">Neutral</option>
+                      <option value="negative">Negative</option>
+                    </select>
                   </div>
                 </div>
               ))}

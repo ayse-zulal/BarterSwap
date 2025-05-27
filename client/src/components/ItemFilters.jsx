@@ -11,7 +11,7 @@ const ItemFilters = ({ onApply, type}) => {
       <input
         type="string"
         placeholder="Item Name"
-        style={{padding: "0.5rem", backgroundColor: '#f0efd9', border: 'none', borderRadius: '8px', cursor: 'pointer'}}
+        style={{padding: "0.5rem", backgroundColor: '#f0efd9', border: '1px solid #ccc', borderRadius: '8px', cursor: 'pointer'}}
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
@@ -19,7 +19,7 @@ const ItemFilters = ({ onApply, type}) => {
         <input
           type="date"
           placeholder="Purchase Date"
-          style={{padding: "0.5rem", backgroundColor: '#f0efd9', border: 'none', borderRadius: '8px', cursor: 'pointer'}}
+          style={{padding: "0.5rem", backgroundColor: '#f0efd9', border: '1px solid #ccc', borderRadius: '8px', cursor: 'pointer'}}
           value={date}
           onChange={(e) => setDate(e.target.value)}
         />
@@ -27,14 +27,14 @@ const ItemFilters = ({ onApply, type}) => {
       <input
         type="integer"
         placeholder="Min Price"
-        style={{padding: "0.5rem", backgroundColor: '#f0efd9', border: 'none', borderRadius: '8px', cursor: 'pointer'}}
+        style={{padding: "0.5rem", backgroundColor: '#f0efd9', border: '1px solid #ccc', borderRadius: '8px', cursor: 'pointer'}}
         value={minPrice}
         onChange={(e) => setMinPrice(e.target.value)}
       />
       <input
         type="integer"
         placeholder="Max Price"
-        style={{padding: "0.5rem", backgroundColor: '#f0efd9', border: 'none', borderRadius: '8px', cursor: 'pointer'}}
+        style={{padding: "0.5rem", backgroundColor: '#f0efd9', border: '1px solid #ccc', borderRadius: '8px', cursor: 'pointer'}}
         value={maxPrice}
         onChange={(e) => setMaxPrice(e.target.value)}
       />

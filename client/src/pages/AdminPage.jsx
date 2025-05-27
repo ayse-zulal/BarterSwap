@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import AdminSidebar from "../components/AdminSideBar.jsx";
 import UsersView from "./UsersView";
 import ItemsView from "./ItemsView";
-import BidsView from "./BidsView";
 import TransactionsView from "./TransactionsView";
 import ReportsView from "./ReportsView";
 import useAuthStore from '../store/AuthStore.ts'; 
@@ -21,7 +20,6 @@ const AdminPage = () => {
     switch (activeView) {
       case "users": return <UsersView />;
       case "items": return <ItemsView />;
-      case "bids": return <BidsView />;
       case "transactions": return <TransactionsView />;
       case "reports": return <ReportsView />;
       default: return <UsersView />;
