@@ -4,13 +4,13 @@ import UsersView from "./UsersView";
 import ItemsView from "./ItemsView";
 import TransactionsView from "./TransactionsView";
 import ReportsView from "./ReportsView";
+import RewardView from "./RewardView";
 import useAuthStore from '../store/AuthStore.ts'; 
 
 const AdminPage = () => {
   const currentUser = useAuthStore(state => state.user);
 
   const [activeView, setActiveView] = useState("users");
-  console.log("Current User:", currentUser);
 
   if (currentUser?.student.studentname !== "ADMIN") {
     return <div style={{ padding: 32 }}>Access Denied. Admins only.</div>;
@@ -22,6 +22,7 @@ const AdminPage = () => {
       case "items": return <ItemsView />;
       case "transactions": return <TransactionsView />;
       case "reports": return <ReportsView />;
+      case "rewards": return <RewardView />;
       default: return <UsersView />;
     }
   };

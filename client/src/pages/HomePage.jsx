@@ -5,6 +5,7 @@ const HomePage = () => {
   const items = useItemStore((state) => state.filteredItems);
   const fetchItems = useItemStore(state => state.fetchItems);
   const filterItems = useItemStore(state => state.filterItems);
+    const [visibleCountItems, setVisibleCountItems] = useState(20);
 
   const [filters, setFilters] = useState({
     searchQuery: "",
@@ -29,6 +30,7 @@ const HomePage = () => {
       condition: filters.condition
     });
   }, [filters]);
+  console.log(items)
 
   return (
     <div style={{ padding: "24px", minHeight: "100vh" }}>
@@ -98,7 +100,7 @@ const HomePage = () => {
 
       {/* Items Grid */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))", gap: "24px" }}>
-        {items.map((item) => (
+        {items.slice(0, visibleCountItems).map((item) => (
           <div key={item.itemid}
             style={{
               backgroundColor: "white", borderRadius: "16px", padding: "16px",
@@ -129,6 +131,24 @@ const HomePage = () => {
             </div>
           </div>
         ))}
+
+        {visibleCountItems < items.length && (
+                      <div style={{ textAlign: "center", marginTop: "1rem" }}>
+                        <button
+                          onClick={() => setVisibleCountItems(visibleCountItems + 20)}
+                          style={{
+                            padding: '0.6rem 1.2rem',
+                            backgroundColor: '#8fbc8f',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Show More
+                        </button>
+                      </div>
+          )}
       </div>
     </div>
   );

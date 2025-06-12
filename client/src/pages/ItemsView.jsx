@@ -66,6 +66,7 @@ const ItemsView = () => {
         </thead>
         <tbody>
           {filteredItems.slice(0, visibleCountItems).map(item => (
+            <>
             <React.Fragment key={item.itemid}>
               <tr>
                 <td style={tdStyle}>{item.itemid}</td>
@@ -142,7 +143,17 @@ const ItemsView = () => {
                   </td>
                 </tr>
               )}
-             {visibleCountItems < items.length && (
+             
+            </React.Fragment>
+            
+
+            </>
+            
+           
+          ))}
+        </tbody>
+      </table>
+      {visibleCountItems < filteredItems.length && (
                 <div style={{ textAlign: "center", marginTop: "1rem" }}>
                   <button
                     onClick={() => setVisibleCountItems(visibleCountItems + 20)}
@@ -159,12 +170,6 @@ const ItemsView = () => {
                   </button>
                 </div>
               )}
-            </React.Fragment>
-
-           
-          ))}
-        </tbody>
-      </table>
     </div>
   );
 };

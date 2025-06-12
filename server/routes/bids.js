@@ -21,21 +21,27 @@ router.post('/', async (req, res) => {
 
     await client.query('BEGIN');
 
-    const existing = await client.query(
-      'SELECT MAX(bidAmount) as max FROM Bids WHERE itemId = $1',
+    // currentPrice'ı Items tablosundan al
+    const itemResult = await client.query(
+      'SELECT currentPrice FROM Items WHERE itemId = $1',
       [itemId]
     );
 
-    if (existing.rows[0].max !== null && bidAmount <= existing.rows[0].max) {
+    const currentPrice = itemResult.rows[0]?.currentprice ?? 0;
+
+    // Teklif kontrolü
+    if (bidAmount <= currentPrice) {
       await client.query('ROLLBACK');
-      return res.status(400).json({ message: 'Bid must be higher than existing bids' });
+      return res.status(400).json({ message: 'Bid must be higher than current price' });
     }
 
+    // Yeni bid ekle
     const newBid = await client.query(
       'INSERT INTO Bids (itemId, userId, bidAmount) VALUES ($1, $2, $3) RETURNING *',
       [itemId, userId, bidAmount]
     );
 
+    // Items tablosundaki currentPrice'ı güncelle
     await client.query(
       'UPDATE Items SET currentPrice = $1 WHERE itemId = $2',
       [bidAmount, itemId]
@@ -56,6 +62,7 @@ router.post('/', async (req, res) => {
     client.release();
   }
 });
+
 
 router.delete("/:bidId", async (req, res) => {
   const { bidId } = req.params;

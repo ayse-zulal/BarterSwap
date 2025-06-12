@@ -45,7 +45,7 @@ const UsersView = () => {
           </tr>
         </thead>
         <tbody>
-          {users.map(user => (
+          {users.slice(0, visibleCountUsers).map(user => (
             <tr key={user.userid}>
               <td style={tdStyle}>{user.userid}</td>
               <td style={tdStyle}>{user.studentname || "-"}</td>

@@ -1,10 +1,9 @@
-import React from "react";
-
 const navItems = [
   { key: "users", label: "All Users" },
   { key: "items", label: "All Items" },
   { key: "transactions", label: "Transactions" },
   { key: "reports", label: "Generate Reports" },
+  { key: "rewards", label: "Create Rewards" },
 ];
 
 const AdminSidebar = ({ setActiveView, activeView }) => {

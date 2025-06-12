@@ -83,7 +83,7 @@ const TransactionsView = () => {
             ))}
           </tbody>
         </table>
-        {visibleCountTransactions < transactions.length && (
+        {visibleCountTransactions < filtered.length && (
                 <div style={{ textAlign: "center", marginTop: "1rem" }}>
                   <button
                     onClick={() => setVisibleCountTransactions(visibleCountTransactions + 20)}

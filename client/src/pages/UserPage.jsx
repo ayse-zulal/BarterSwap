@@ -104,7 +104,6 @@ const handleUpdateItem = (item) => {
 
 const handleFeedback = async (itemId, value) => {
   try {
-    console.log("Submitting feedback:", value);
 
     const res = await axios.put(
   `http://localhost:5000/api/transactions/${itemId}/feedback`,
@@ -326,7 +325,6 @@ const handleFeedback = async (itemId, value) => {
               <option value="furniture">Furniture</option>
               <option value="home">Home</option>
               <option value="beauty">Beauty Products</option>
-              <option value="other">Other</option>
             </select>
 
             <select

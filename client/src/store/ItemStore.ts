@@ -23,7 +23,7 @@ const useItemStore = create((set) => ({
         const priceMatch = item.currentprice >= minPrice && item.currentprice <= maxPrice;
         const bidMatch = (item.bids?.length || 0) >= minBids;
         const categoryMatch = category ? item.category === category : true;
-        const conditionMatch = condition ? item.condition === condition : true;
+        const conditionMatch = condition ? item.itemcondition === condition : true;
 
         return titleMatch && priceMatch && bidMatch && categoryMatch && conditionMatch;
       }),
