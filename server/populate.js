@@ -164,7 +164,7 @@ const insertFakeBids = async () => {
   const client = await pool.connect();
   try {
     const itemsRes = await client.query(
-      `SELECT itemid, userid, currentprice FROM items`
+      `SELECT itemid, userid, currentprice FROM items LIMIT 10000`
     );
     const usersRes = await client.query(`SELECT userid FROM users WHERE userid > 0`);
     const allUserIds = usersRes.rows.map((row) => row.userid);
@@ -176,12 +176,12 @@ const insertFakeBids = async () => {
 
     for (const item of itemsRes.rows) {
       const { itemid, userid: ownerId, currentprice } = item;
-      console.log(`Bids for ${index} item.`);
+      console.log(index)
       index+=1;
 
       const eligibleBidders = allUserIds.filter((id) => id !== ownerId);
       const shuffled = eligibleBidders.sort(() => 0.5 - Math.random());
-      const bidCount = Math.floor(Math.random() * 13) + 3;
+      const bidCount = faker.number.int({ min: 1, max: 3 });
       const selectedBidders = shuffled.slice(0, bidCount);
 
       let bidPrice = parseFloat(currentprice);
@@ -289,8 +289,9 @@ const simulateItemSales = async () => {
           throw new Error("User balances not found");
         }
 
-        if (buyerBalance.balance < highestBid.bidamount) {
+        if (Number(buyerBalance.balance) < Number(highestBid.bidamount)) {
           // Delete the invalid bid
+          console.log(buyerBalance.balance, highestBid.bidamount)
           await client.query(`DELETE FROM bids WHERE bidid = $1`, [highestBid.bidid]);
           await client.query("ROLLBACK");
 
@@ -345,8 +346,9 @@ const simulateItemSales = async () => {
 const runAll = async () => {
   try {
 
+
     console.log("📦 Inserting items...");
-    await insertFakeItems();
+    await simulateItemSales();
 
     console.log("✅ All operations completed.");
   } catch (err) {

@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const authMiddleware = require('../middleware/auth');
-
 // get all users
 router.get('/', async (req, res) => {
   try {
@@ -27,7 +26,20 @@ router.get('/', async (req, res) => {
   }
 });
 
-// delete a user 
+// get user by ID
+router.get('/:userId', async (req, res) => {
+  try {
+    const user = await pool.query("SELECT * FROM Users WHERE userId = $1", [req.params.userId]);
+    const balance = await pool.query("SELECT * FROM VirtualCurrency WHERE userId = $1", [req.params.userId]);
+    const student = await pool.query("SELECT * FROM Students WHERE userId = $1", [req.params.userId]);
+    res.json({ user: user.rows[0], student: student.rows[0], balance: balance.rows[0] });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+
+// delete a user
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
 
