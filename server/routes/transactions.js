@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
-// GET all transactions
+// get all transactions
 router.get('/', async (req, res) => {
   try {
     const transactions = await pool.query(
@@ -28,7 +28,8 @@ router.get('/', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
-// GET transactions by user ID
+
+// get transactions by user ID
 router.get('/buyer/:userId', async (req, res) => {
   const { userId } = req.params;
 
@@ -61,21 +62,7 @@ router.get('/buyer/:userId', async (req, res) => {
   }
 });
 
-// POST create a new transaction
-router.post('/', async (req, res) => {
-  try {
-    const { buyerId, sellerId, itemId, price, transactionDate } = req.body;
-    const newTransaction = await pool.query(
-      'INSERT INTO Transactions (buyerId, sellerId, itemId, price, transactionDate, feedback) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-      [buyerId, sellerId, itemId, price, transactionDate, null]
-    );
-    res.json(newTransaction.rows[0]);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
-  }
-});
-
+// give feedback on a transaction
 router.put("/:id/feedback", async (req, res) => {
   const client = await pool.connect();
   const { id } = req.params;

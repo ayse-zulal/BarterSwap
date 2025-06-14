@@ -77,7 +77,7 @@ const HomePage = () => {
             <option value="">All Categories</option>
             <option value="electronics">Electronics</option>
             <option value="books">Books</option>
-            <option value="clothing">Clothing</option>
+            <option value="fashion">Clothing</option>
             <option value="home">Home</option>
             <option value="furniture">Furniture</option>
             <option value="beauty">Beauty Products</option>

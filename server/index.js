@@ -3,6 +3,7 @@ const cors = require('cors');
 const app = express();
 const pool = require('./db'); 
 require("dotenv").config();
+
 // middleware
 app.use(cors({
   origin: "http://localhost:3000", // frontend adresin
@@ -16,7 +17,6 @@ app.use("/api/items", require("./routes/items"));
 app.use("/api/bids", require("./routes/bids"));
 app.use("/api/messages", require("./routes/messages"));
 app.use("/api/rewards", require("./routes/rewards"));
-app.use("/api/user-rewards", require("./routes/userRewards"));
 app.use("/api/transactions", require("./routes/transactions"));
 app.use("/api/students", require("./routes/students"));
 app.use("/api/users", require("./routes/users"));

@@ -3,7 +3,6 @@ const router = express.Router();
 const { Parser } = require("json2csv");
 const pool = require("../db");
 
-// Helper to send CSV
 const sendCsvResponse = (res, rows, filename) => {
   const parser = new Parser();
   const csv = parser.parse(rows);
@@ -44,7 +43,7 @@ router.get("/top-users", async (req, res) => {
       LEFT JOIN Transactions t ON t.buyerid = s.userid
       GROUP BY s.studentname
       ORDER BY transaction_count DESC, bid_count DESC
-      LIMIT 20
+      LIMIT 100
     `);
     sendCsvResponse(res, result.rows, "top_users.csv");
   } catch (err) {
@@ -83,7 +82,7 @@ router.get("/competitive-items", async (req, res) => {
       JOIN Bids b ON i.itemid = b.itemid
       GROUP BY i.title
       ORDER BY total_bids DESC
-      LIMIT 20
+      LIMIT 100
     `);
     sendCsvResponse(res, result.rows, "most_competitive_items.csv");
   } catch (err) {

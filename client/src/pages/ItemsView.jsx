@@ -14,7 +14,6 @@ const ItemsView = () => {
       setFilteredItems(res.data);
     });
   }, []);
-  console.log(items);
 
   const [expandedItemId, setExpandedItemId] = useState(null);
 

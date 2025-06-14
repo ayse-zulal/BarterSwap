@@ -5,7 +5,7 @@ function verifyToken(req, res, next) {
 
   if (!authHeader) return res.status(401).json({ message: "Missing token" });
 
-  const token = authHeader.split(" ")[1]; // "Bearer <token>"
+  const token = authHeader.split(" ")[1];
 
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
@@ -13,7 +13,7 @@ function verifyToken(req, res, next) {
       return res.status(403).json({ message: "Invalid token" });
     }
 
-    req.user = decoded; // decoded => { id, iat, exp }
+    req.user = decoded; 
     next();
   });
 }

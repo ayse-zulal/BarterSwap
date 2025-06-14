@@ -2,18 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
-// GET all rewards
-router.get('/', async (req, res) => {
-  try {
-    const rewards = await pool.query('SELECT * FROM Rewards');
-    res.json(rewards.rows);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
-  }
-});
-
-// POST create a new reward
+// create a new reward
 router.post("/", async (req, res) => {
   const client = await pool.connect();
   const { rewardtype, rewardname, rewardamount, conditiontype, conditionvalue } = req.body;
@@ -21,7 +10,7 @@ router.post("/", async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    // 1. Ödülü ekle
+    // add the new reward
     const rewardInsert = await client.query(
       `INSERT INTO rewards (rewardtype, rewardname, rewardamount, conditiontype, conditionvalue)
        VALUES ($1, $2, $3, $4, $5)
@@ -31,7 +20,7 @@ router.post("/", async (req, res) => {
 
     const rewardId = rewardInsert.rows[0].rewardid;
 
-    // 2. Şartlara uyan kullanıcıları belirle
+    // decide which users fit in the conditions
     let conditionQuery = "";
 
     switch (conditiontype) {
@@ -95,7 +84,6 @@ router.post("/", async (req, res) => {
 
     const usersRes = await client.query(conditionQuery, [conditionvalue]);
     const eligibleUserIds = usersRes.rows.map(row => row.userid);
-    console.log(eligibleUserIds.slice(0,10))
 
     if (eligibleUserIds.length === 0) {
       await client.query("ROLLBACK");

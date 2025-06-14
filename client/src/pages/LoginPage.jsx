@@ -9,6 +9,7 @@ const LoginPage = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const fetchUser = useAuthStore(state => state.fetchUser);
+  const tokenExpired = useAuthStore(state => state.tokenExpired);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -21,6 +22,15 @@ const LoginPage = () => {
       });
 
       localStorage.setItem("token", res.data.token);
+
+      if (tokenExpired) {
+        await axios.post(
+          "http://localhost:5000/api/auth/increment-streak",
+          {},
+          { headers: { Authorization: `Bearer ${res.data.token}` } }
+        );
+      }
+
       await fetchUser();
 
       if (studentId === "999999") {
@@ -39,6 +49,7 @@ const LoginPage = () => {
       }
     }
   };
+  console.log(tokenExpired)
 
   return (
     <div style={styles.container}>
@@ -81,7 +92,6 @@ const styles = {
     alignItems: "center",
   },
   form: {
-    backgroundColor: "white",
     padding: "2rem",
     borderRadius: "12px",
     boxShadow: "0 4px 12px rgba(0,0,0,0.1)",

@@ -93,4 +93,29 @@ router.get("/me", verifyToken, (req, res) => {
   res.json({ message: "Access granted", userId: req.user.id });
 });
 
+// login streak incrementation
+router.post("/increment-streak", verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const userRes = await pool.query(
+      "SELECT loginstreak FROM users WHERE userid = $1",
+      [userId]
+    );
+
+    const currentStreak = userRes.rows[0].loginstreak || 0;
+    const newStreak = currentStreak + 1;
+
+    await pool.query(
+      "UPDATE users SET loginstreak = $1 WHERE userid = $2",
+      [newStreak, userId]
+    );
+
+    res.json({ success: true, newStreak });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update login streak" });
+  }
+});
+
 module.exports = router;

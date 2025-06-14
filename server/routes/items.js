@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
-// GET all available items
+// get all items
 router.get('/', async (req, res) => {
   try {
     const itemsResult = await pool.query('SELECT * FROM Items');
@@ -39,6 +39,7 @@ router.get('/', async (req, res) => {
   }
 });
 
+// get all available items
 router.get('/available', async (req, res) => {
   try {
     const itemsResult = await pool.query('SELECT * FROM Items WHERE isactive = TRUE');
@@ -75,6 +76,7 @@ router.get('/available', async (req, res) => {
   }
 });
 
+// get a spesific item
 router.get('/:itemId', async (req, res) => {
   try {
     const { itemId } = req.params;
@@ -106,6 +108,7 @@ router.get('/:itemId', async (req, res) => {
   }
 });
 
+// mark an item as sold
 router.put("/:itemId/mark-sold", async (req, res) => {
   const client = await pool.connect();
   const itemId = req.params.itemId;
@@ -212,6 +215,7 @@ router.put("/:itemId/mark-sold", async (req, res) => {
   }
 });
 
+// update an item
 router.put("/:itemId", async (req, res) => {
   const { itemId } = req.params;
   const { title, category, itemcondition, image } = req.body;
@@ -236,6 +240,7 @@ router.put("/:itemId", async (req, res) => {
   }
 });
 
+// get the items of an user
 router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -250,7 +255,7 @@ router.get('/user/:userId', async (req, res) => {
   }
 });
 
-// POST create new item
+// create a new item
 router.post('/', async (req, res) => {
   try {
     const {
@@ -266,13 +271,13 @@ router.post('/', async (req, res) => {
       isRefunded,
     } = req.body;
 
-    // 1. Category enum kontrolü
+    // check the item category
     const validCategories = ['electronics', 'furniture', 'beauty', 'books', 'home', 'fashion', 'other'];
     if (!validCategories.includes(category)) {
       return res.status(400).json({ error: 'Invalid category. Must be one of: ' + validCategories.join(', ') });
     }
 
-    // 2. Görsel URL kontrolü
+    // check the image url
     function isValidImageUrl(url) {
       return /^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i.test(url);
     }
@@ -280,7 +285,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Invalid image URL. Must be a link to an image (jpg, png, etc).' });
     }
 
-    // 3. (İsteğe Bağlı) Boş alan kontrolü vs.
+    // check for a missing requirement field
     if (!title || !description || !startingPrice) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
@@ -305,7 +310,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Refund an item
+// refund an item
 router.post("/:id/refund", async (req, res) => {
   const client = await pool.connect();
   const itemId = req.params.id;
@@ -313,7 +318,7 @@ router.post("/:id/refund", async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    // 1. Item'ı al
+    // get the item
     const itemRes = await client.query("SELECT * FROM Items WHERE itemid = $1", [itemId]);
     const item = itemRes.rows[0];
 
@@ -321,7 +326,7 @@ router.post("/:id/refund", async (req, res) => {
       throw new Error("Item not found");
     }
 
-    // 2. Transaction'dan satın alan kişiyi ve ödediği fiyatı al
+    // get the transaction of that item
     const txRes = await client.query(
       "SELECT * FROM Transactions WHERE itemId = $1",
       [itemId]
@@ -336,7 +341,7 @@ router.post("/:id/refund", async (req, res) => {
     const sellerId = transaction.sellerid;
     const amountPaid = transaction.price;
 
-    // 3. Buyer'ın parasını iade et
+    // refund to the buyer
     await client.query(
       "UPDATE VirtualCurrency SET balance = balance + $1 WHERE userId = $2",
       [amountPaid, buyerId]
@@ -347,13 +352,13 @@ router.post("/:id/refund", async (req, res) => {
       [amountPaid, sellerId]
     );
 
-    // 4. Tüm teklifleri sil
+    // delete all previous bids
     await client.query("DELETE FROM Bids WHERE itemId = $1", [itemId]);
 
-    // 5. Transaction kaydını sil
+    // delete transaction record
     await client.query("DELETE FROM Transactions WHERE itemId = $1", [itemId]);
 
-    // 6. Item'ı güncelle: refunded, aktif, currentPrice reset
+    // update the item for the refund
     await client.query(
       "UPDATE Items SET isRefunded = true, isActive = true, currentPrice = startingPrice WHERE itemid = $1",
       [itemId]
@@ -372,7 +377,7 @@ router.post("/:id/refund", async (req, res) => {
 });
 
 
-
+// deleting an item
 router.delete("/:itemid", async (req, res) => {
   const { itemid } = req.params;
 

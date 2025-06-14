@@ -4,6 +4,7 @@ import axios from 'axios';
 const useAuthStore = create((set) => ({
   user: null,
   isAuthenticated: false,
+  tokenExpired: false,
   bids: [],
   purchasedItems: [],
   userItems: [],
@@ -30,6 +31,9 @@ const useAuthStore = create((set) => ({
         userItems: userItems.data,
       });
     } catch (err) {
+      if (err.response?.status === 403) {
+        set({ tokenExpired: true });
+      }
       set({ user: null, isAuthenticated: false });
     }
   },

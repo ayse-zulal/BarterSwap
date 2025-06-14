@@ -2,18 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
-// GET all bids
-router.get('/', async (req, res) => {
-  try {
-    const bids = await pool.query('SELECT * FROM Bids');
-    res.json(bids.rows);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
-  }
-});
-
-// POST place a bid
+// place a bid
 router.post('/', async (req, res) => {
   const client = await pool.connect();
   try {
@@ -21,7 +10,7 @@ router.post('/', async (req, res) => {
 
     await client.query('BEGIN');
 
-    // currentPrice'ı Items tablosundan al
+    // get current price of the item
     const itemResult = await client.query(
       'SELECT currentPrice FROM Items WHERE itemId = $1',
       [itemId]
@@ -29,19 +18,19 @@ router.post('/', async (req, res) => {
 
     const currentPrice = itemResult.rows[0]?.currentprice ?? 0;
 
-    // Teklif kontrolü
+    // check if the bid amount is appropriate
     if (bidAmount <= currentPrice) {
       await client.query('ROLLBACK');
       return res.status(400).json({ message: 'Bid must be higher than current price' });
     }
 
-    // Yeni bid ekle
+    // add a new bid
     const newBid = await client.query(
       'INSERT INTO Bids (itemId, userId, bidAmount) VALUES ($1, $2, $3) RETURNING *',
       [itemId, userId, bidAmount]
     );
 
-    // Items tablosundaki currentPrice'ı güncelle
+    // update the current price
     await client.query(
       'UPDATE Items SET currentPrice = $1 WHERE itemId = $2',
       [bidAmount, itemId]
@@ -63,7 +52,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-
+// deleting a bid
 router.delete("/:bidId", async (req, res) => {
   const { bidId } = req.params;
   const client = await pool.connect();
@@ -138,7 +127,7 @@ router.delete("/:bidId", async (req, res) => {
   }
 });
 
-
+// get spesific item bids
 router.get('/item/:itemId', async (req, res) => {
   try {
     const { itemId } = req.params;
@@ -156,36 +145,37 @@ router.get('/item/:itemId', async (req, res) => {
   }
 });
 
+// get a users bids
 router.get('/user/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const bids = await pool.query(
-      `WITH UserHighestBids AS (
-      SELECT 
-        b.itemid,
-        b.userid,
-        MAX(b.bidamount) AS highest_bid
-      FROM Bids b
-      GROUP BY b.itemid, b.userid
-      )
+      ` WITH UserHighestBids AS (
+        SELECT 
+          b.itemid,
+          b.userid,
+          MAX(b.bidamount) AS highest_bid
+        FROM Bids b
+        GROUP BY b.itemid, b.userid
+        )
 
-      SELECT 
-        b.*, 
-        i.title AS itemname, 
-        i.image AS itemimage,
-        i.isactive,
-        CASE 
-          WHEN t.transactionid IS NOT NULL AND b.bidamount = uhb.highest_bid THEN TRUE
-          ELSE FALSE
-        END AS didwin
-      FROM Bids b
-      JOIN Items i ON b.itemid = i.itemid
-      LEFT JOIN UserHighestBids uhb 
-        ON b.itemid = uhb.itemid AND b.userid = uhb.userid
-      LEFT JOIN Transactions t 
-        ON t.itemid = b.itemid AND t.buyerid = b.userid
-      WHERE b.userid = $1
-      ORDER BY b.bidid DESC;
+        SELECT 
+          b.*, 
+          i.title AS itemname, 
+          i.image AS itemimage,
+          i.isactive,
+          CASE 
+            WHEN t.transactionid IS NOT NULL AND b.bidamount = uhb.highest_bid THEN TRUE
+            ELSE FALSE
+          END AS didwin
+        FROM Bids b
+        JOIN Items i ON b.itemid = i.itemid
+        LEFT JOIN UserHighestBids uhb 
+          ON b.itemid = uhb.itemid AND b.userid = uhb.userid
+        LEFT JOIN Transactions t 
+          ON t.itemid = b.itemid AND t.buyerid = b.userid
+        WHERE b.userid = $1
+        ORDER BY b.bidid DESC;
 
       `,
       [userId]
@@ -196,4 +186,5 @@ router.get('/user/:userId', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
 module.exports = router;

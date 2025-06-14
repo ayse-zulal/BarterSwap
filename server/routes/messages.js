@@ -2,17 +2,7 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
-// GET all messages
-router.get('/', async (req, res) => {
-  try {
-    const messages = await pool.query('SELECT * FROM Messages');
-    res.json(messages.rows);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
-  }
-});
-
+// get a users messages
 router.get("/:userId", async (req, res) => {
   const { userId } = req.params;
   try {
@@ -51,7 +41,7 @@ router.get("/:userId", async (req, res) => {
   }
 });
 
-// POST create a new message
+// create a new message
 router.post('/', async (req, res) => {
   try {
     const { senderId, receiverId, content, isRead } = req.body;
@@ -66,6 +56,7 @@ router.post('/', async (req, res) => {
   }
 });
 
+// mark a message as already read
 router.post('/mark-read', async (req, res) => {
   const { senderid, receiverid } = req.body;
   try {
@@ -81,4 +72,5 @@ router.post('/mark-read', async (req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 });
+
 module.exports = router;

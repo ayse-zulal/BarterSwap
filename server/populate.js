@@ -7,7 +7,7 @@ const BATCH_SIZE = 500;
 const generateUniqueStudentId = (usedIds) => {
   let id;
   do {
-    id = faker.number.int({ min: 100000, max: 999998 }).toString(); // ✅ GÜNCELLENDİ
+    id = faker.number.int({ min: 100000, max: 999998 }).toString();
   } while (usedIds.has(id));
   usedIds.add(id);
   return id;
@@ -15,29 +15,43 @@ const generateUniqueStudentId = (usedIds) => {
 
 const insertFakeStudents = async () => {
   const client = await pool.connect();
-  const usedStudentIds = new Set();
-  const usedEmails = new Set();
 
   try {
-    for (let batch = 0; batch < 4; batch++) {
+    // 1. Veritabanında zaten olan studentid'leri getir
+    const existingIdsResult = await client.query("SELECT studentid FROM students");
+    const usedStudentIds = new Set(existingIdsResult.rows.map(row => row.studentid));
+
+    // 2. Kullanılmış email'leri de sorgulayabilirsin (opsiyonel ama önerilir)
+    const existingEmailsResult = await client.query("SELECT email FROM students");
+    const usedEmails = new Set(existingEmailsResult.rows.map(row => row.email));
+
+    for (let batch = 0; batch < 10; batch++) {
       await client.query('BEGIN');
       const promises = [];
 
       for (let i = 0; i < BATCH_SIZE; i++) {
         const loginStreak = 0;
-        const lastLogin = faker.date.recent(); // ✅ HÂLÂ GEÇERLİ
+        const lastLogin = faker.date.recent();
         const reputation = 0;
 
-        const studentName = faker.person.fullName(); // ✅ GÜNCELLENDİ
+        const studentName = faker.person.fullName();
         let email;
         do {
-          email = faker.internet.email(); // ✅ GEÇERLİ
+          email = faker.internet.email();
         } while (usedEmails.has(email));
         usedEmails.add(email);
 
-        const studentId = generateUniqueStudentId(usedStudentIds);
+        let studentId;
+        let tries = 0;
+        do {
+          studentId = faker.number.int({ min: 100000, max: 999998 }).toString();
+          tries++;
+          if (tries > 1000) throw new Error("Couldn't find unique student ID.");
+        } while (usedStudentIds.has(studentId));
+        usedStudentIds.add(studentId);
+
         const hashedPassword = await bcrypt.hash('1234', 10);
-        const balance = faker.number.int({ min: 0, max: 500 }); // ✅ GÜNCELLENDİ
+        const balance = faker.number.int({ min: 0, max: 1000 });
 
         const insertUser = client.query(
           `INSERT INTO users (loginstreak, lastlogin, reputation)
@@ -68,19 +82,19 @@ const insertFakeStudents = async () => {
       console.log(`✅ Batch ${batch + 1} inserted.`);
     }
 
-    console.log("🎉 All fake students inserted!");
+    console.log("All students inserted");
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error("❌ Error during batch insert:", err);
+    console.error("Error during batch insert:", err);
   } finally {
     client.release();
   }
 };
 
+
 const insertFakeItems = async () => {
   const client = await pool.connect();
 
-  // Örnek kategoriler
   const categories = ['electronics', 'furniture', 'beauty', 'books', 'home', 'fashion'];
   const conditions = [
     'New',
@@ -100,7 +114,7 @@ const insertFakeItems = async () => {
     const itemPromises = [];
 
     for (const userId of userIds) {
-      const numberOfItems = faker.number.int({ min: 5, max: 15 });
+      const numberOfItems = faker.number.int({ min: 25, max: 50 });
 
       for (let i = 0; i < numberOfItems; i++) {
         const title = faker.commerce.productName();
@@ -137,10 +151,10 @@ const insertFakeItems = async () => {
 
     await Promise.all(itemPromises);
     await client.query('COMMIT');
-    console.log(`🎁 Fake items inserted for ${userIds.length} users.`);
+    console.log(`items inserted for ${userIds.length} users.`);
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error("❌ Error inserting items:", err);
+    console.error("Error inserting items:", err);
   } finally {
     client.release();
   }
@@ -165,16 +179,14 @@ const insertFakeBids = async () => {
       console.log(`Bids for ${index} item.`);
       index+=1;
 
-      // Item sahibi olmayanlardan rastgele 3 kullanıcı seç
       const eligibleBidders = allUserIds.filter((id) => id !== ownerId);
       const shuffled = eligibleBidders.sort(() => 0.5 - Math.random());
-      const bidCount = Math.floor(Math.random() * 13) + 3; // 3 ile 15 arasında
+      const bidCount = Math.floor(Math.random() * 13) + 3;
       const selectedBidders = shuffled.slice(0, bidCount);
 
       let bidPrice = parseFloat(currentprice);
 
       for (const bidderId of selectedBidders) {
-        // her bid biraz daha yüksek olsun
         bidPrice += parseFloat((Math.random() * 50 + 1).toFixed(2));
 
         const bidQuery = client.query(
@@ -200,10 +212,10 @@ const insertFakeBids = async () => {
       await Promise.all(chunk);
     }
     await client.query('COMMIT');
-    console.log('✅ Fake bids inserted.');
+    console.log('Fake bids inserted.');
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('❌ Error inserting bids:', err);
+    console.error('Error inserting bids:', err);
   } finally {
     client.release();
   }
@@ -230,7 +242,6 @@ const simulateItemSales = async () => {
       try {
         await client.query("BEGIN");
 
-        // 1. Item lock & fetch
         const itemRes = await client.query(
           `SELECT itemid, userid AS seller_id, isactive 
            FROM items WHERE itemid = $1 FOR UPDATE`,
@@ -247,7 +258,6 @@ const simulateItemSales = async () => {
           throw new Error("Item already sold");
         }
 
-        // 2. Highest bid lock & fetch
         const bidRes = await client.query(
           `SELECT bidid, userid AS buyer_id, bidamount 
            FROM bids 
@@ -264,7 +274,6 @@ const simulateItemSales = async () => {
 
         const highestBid = bidRes.rows[0];
 
-        // 3. Lock buyer & seller balances
         const balancesRes = await client.query(
           `SELECT userid, balance 
            FROM virtualcurrency 
@@ -283,9 +292,9 @@ const simulateItemSales = async () => {
         if (buyerBalance.balance < highestBid.bidamount) {
           // Delete the invalid bid
           await client.query(`DELETE FROM bids WHERE bidid = $1`, [highestBid.bidid]);
-          await client.query("COMMIT");
+          await client.query("ROLLBACK");
 
-          console.log(`❌ Item ${itemId} not sold: Buyer has insufficient balance, bid removed`);
+          console.log(`Item ${itemId} not sold: Buyer has insufficient balance, bid removed`);
           failedCount++;
           continue;
         }
@@ -316,23 +325,33 @@ const simulateItemSales = async () => {
 
         await client.query("COMMIT");
 
-        console.log(`✅ Item ${itemId} sold to buyer ${highestBid.buyer_id}`);
+        console.log(`Item ${itemId} sold to buyer ${highestBid.buyer_id}`);
         successCount++;
       } catch (err) {
         await client.query("ROLLBACK");
-        console.log(`❌ Item ${itemId} not sold: ${err.message}`);
+        console.log(`Item ${itemId} not sold: ${err.message}`);
         failedCount++;
       }
     }
 
-    console.log(`📊 Sales simulation finished. Success: ${successCount}, Failed: ${failedCount}`);
+    console.log(`Sales simulation finished. Success: ${successCount}, Failed: ${failedCount}`);
   } catch (err) {
-    console.error("❌ Simulation failed:", err);
+    console.error("Simulation failed:", err);
   } finally {
     client.release();
   }
 };
 
+const runAll = async () => {
+  try {
 
+    console.log("📦 Inserting items...");
+    await insertFakeItems();
 
-simulateItemSales();
+    console.log("✅ All operations completed.");
+  } catch (err) {
+    console.error("❌ Error running all functions:", err);
+  }
+};
+
+runAll();
