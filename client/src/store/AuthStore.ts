@@ -38,6 +38,7 @@ const useAuthStore = create((set) => ({
     }
   },
   setUser: (updatedUser) => set({ user: updatedUser }),
+  setTokenExpired: (value) => set({ tokenExpired: value }),
 
   logout: () => {
     localStorage.removeItem("token");

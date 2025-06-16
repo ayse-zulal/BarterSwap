@@ -16,6 +16,7 @@ const AdminSidebar = ({ setActiveView, activeView }) => {
       display: "flex",
       flexDirection: "column",
       gap: "16px",
+      height: "100%",
       boxShadow: "2px 0 8px rgba(0, 0, 0, 0.2)"
     }}>
       <h2 style={{

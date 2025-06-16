@@ -5,6 +5,15 @@ const pool = require('./db');
 require("dotenv").config();
 
 // middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    console.log(`${req.method} ${req.originalUrl} took ${duration}ms`);
+  });
+  next();
+});
+
 app.use(cors({
   origin: "http://localhost:3000", // frontend adresin
   credentials: true
@@ -22,6 +31,7 @@ app.use("/api/students", require("./routes/students"));
 app.use("/api/users", require("./routes/users"));
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/reports", require("./routes/reports"));
+
 
 app.listen(5000, () => {
     console.log("Server running on port 5000");

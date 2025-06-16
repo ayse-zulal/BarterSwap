@@ -97,7 +97,7 @@ const MessagesComponent = ({activeUserId }) => {
       flexDirection: 'column'
     },
     sectionTitle: { fontSize: '1.5rem', marginBottom: '1rem' },
-    chatList: { maxHeight: '200px', overflowY: 'auto', marginBottom: '1rem' },
+    chatList: { maxHeight: '600px', overflowY: 'auto', marginBottom: '1rem' },
     chatUser: { padding: '0.5rem', borderBottom: '1px solid #eee', cursor: 'pointer' },
     messagesBox: {
       flex: 1,

@@ -68,6 +68,7 @@ router.delete("/:id", async (req, res) => {
     await client.query("DELETE FROM Students WHERE userid = $1", [id]);
     await client.query("DELETE FROM VirtualCurrency WHERE userid = $1", [id]);
     await client.query("DELETE FROM Messages WHERE senderid = $1 OR receiverid = $1", [id]);
+    await client.query("DELETE FROM UserRewards WHERE userid = $1", [id]);
     await client.query("DELETE FROM Users WHERE userid = $1", [id]);
 
     await client.query("COMMIT");

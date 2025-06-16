@@ -180,18 +180,22 @@ const handleFeedback = async (itemId, value) => {
   setFilteredBids(filtered);
   };
 
-  const applyItemFilters = ({ minPrice, maxPrice, date, name, type }) => {
+  const applyItemFilters = ({ minPrice, maxPrice, date, name, category, condition, type }) => {
     let filtered = type ? [...purchasedItems] : [...userItems];
     if(type) {
       if (minPrice) filtered = filtered.filter(b => b.price >= parseFloat(minPrice));
       if (maxPrice) filtered = filtered.filter(b => b.price <= parseFloat(maxPrice));
       if (date) filtered = filtered.filter(t => isSameDate(t.transactiondate, date));
+      if (category) filtered = filtered.filter(b => b.category == category);
+      if (condition) filtered = filtered.filter(b => b.condition == condition);
       if (name) filtered = filtered.filter(b => b.itemname.toLowerCase().includes(name.toLowerCase()));
       setFilteredPurchasedItems(filtered)
     }
     else {
       if (minPrice) filtered = filtered.filter(b => b.currentPrice >= parseFloat(minPrice));
       if (maxPrice) filtered = filtered.filter(b => b.currentPrice <= parseFloat(maxPrice));
+      if (category) filtered = filtered.filter(b => b.category == category);
+      if (condition) filtered = filtered.filter(b => b.condition == condition);
       if (name) filtered = filtered.filter(b => b.title.toLowerCase().includes(name.toLowerCase()));
       setFilteredItems(filtered)
     }
@@ -207,6 +211,7 @@ const handleFeedback = async (itemId, value) => {
       transactionDate.getFullYear() === year
     );
 };
+
 
 
   return (

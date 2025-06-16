@@ -3,6 +3,7 @@ const { faker } = require('@faker-js/faker');
 const bcrypt = require("bcryptjs");
 
 const BATCH_SIZE = 500;
+const TOTAL_MESSAGES = 200000;
 
 const generateUniqueStudentId = (usedIds) => {
   let id;
@@ -164,7 +165,7 @@ const insertFakeBids = async () => {
   const client = await pool.connect();
   try {
     const itemsRes = await client.query(
-      `SELECT itemid, userid, currentprice FROM items LIMIT 10000`
+      `SELECT itemid, userid, currentprice FROM items WHERE isactive = true LIMIT 100000`
     );
     const usersRes = await client.query(`SELECT userid FROM users WHERE userid > 0`);
     const allUserIds = usersRes.rows.map((row) => row.userid);
@@ -208,7 +209,6 @@ const insertFakeBids = async () => {
     const chunkSize = 100;
     for (let i = 0; i < bidPromises.length; i += chunkSize) {
       const chunk = bidPromises.slice(i, i + chunkSize);
-      console.log(`Bids for ${i} item.`);
       await Promise.all(chunk);
     }
     await client.query('COMMIT');
@@ -233,7 +233,7 @@ const simulateItemSales = async () => {
     const shuffled = allItemIds.sort(() => 0.5 - Math.random());
     const itemsToSell = shuffled.slice(0, Math.floor(allItemIds.length * 0.3));
 
-    console.log(`🛒 Trying to sell ${itemsToSell.length} items out of ${allItemIds.length}...`);
+    console.log(`Trying to sell ${itemsToSell.length} items out of ${allItemIds.length}...`);
 
     let successCount = 0;
     let failedCount = 0;
@@ -274,43 +274,6 @@ const simulateItemSales = async () => {
 
         const highestBid = bidRes.rows[0];
 
-        const balancesRes = await client.query(
-          `SELECT userid, balance 
-           FROM virtualcurrency 
-           WHERE userid = ANY($1::int[]) 
-           FOR UPDATE`,
-          [[highestBid.buyer_id, item.seller_id]]
-        );
-
-        const buyerBalance = balancesRes.rows.find(r => r.userid === highestBid.buyer_id);
-        const sellerBalance = balancesRes.rows.find(r => r.userid === item.seller_id);
-
-        if (!buyerBalance || !sellerBalance) {
-          throw new Error("User balances not found");
-        }
-
-        if (Number(buyerBalance.balance) < Number(highestBid.bidamount)) {
-          // Delete the invalid bid
-          console.log(buyerBalance.balance, highestBid.bidamount)
-          await client.query(`DELETE FROM bids WHERE bidid = $1`, [highestBid.bidid]);
-          await client.query("ROLLBACK");
-
-          console.log(`Item ${itemId} not sold: Buyer has insufficient balance, bid removed`);
-          failedCount++;
-          continue;
-        }
-
-        // 4. Money transfer
-        await client.query(
-          `UPDATE virtualcurrency SET balance = balance - $1 WHERE userid = $2`,
-          [highestBid.bidamount, highestBid.buyer_id]
-        );
-
-        await client.query(
-          `UPDATE virtualcurrency SET balance = balance + $1 WHERE userid = $2`,
-          [highestBid.bidamount, item.seller_id]
-        );
-
         // 5. Insert transaction
         await client.query(
           `INSERT INTO transactions (itemid, sellerid, buyerid, price, transactiondate)
@@ -342,13 +305,141 @@ const simulateItemSales = async () => {
     client.release();
   }
 };
+const simulateBasicItemSales = async () => {
+  const client = await pool.connect();
+
+  try {
+    // Tüm aktif item'ları ve sahiplerini al
+    const itemsRes = await client.query(`
+      SELECT itemid, userid AS sellerid, currentprice 
+      FROM items 
+      WHERE isactive = TRUE
+      LIMIT 100000
+    `);
+
+    const allItems = itemsRes.rows;
+
+    // Tüm kullanıcıları al
+    const usersRes = await client.query(`SELECT userid FROM users WHERE userid > 0`);
+    const allUserIds = usersRes.rows.map(row => row.userid);
+
+    // Rastgele %30 item seç
+    const shuffledItems = allItems.sort(() => 0.5 - Math.random());
+    const itemsToSell = shuffledItems.slice(0, Math.floor(allItems.length));
+
+    console.log(`Trying to sell ${itemsToSell.length} items out of ${allItems.length}...`);
+
+    let success = 0;
+    let failed = 0;
+
+    for (const item of itemsToSell) {
+      try {
+        await client.query("BEGIN");
+
+        // item'i tekrar kilitle (başkası değiştirmesin)
+        const lockRes = await client.query(
+          `SELECT itemid, isactive FROM items WHERE itemid = $1 FOR UPDATE`,
+          [item.itemid]
+        );
+
+        if (lockRes.rowCount === 0 || !lockRes.rows[0].isactive) {
+          throw new Error("Item not found or already sold");
+        }
+
+        // buyer seç: seller'dan farklı rastgele bir kullanıcı
+        const possibleBuyers = allUserIds.filter(uid => uid !== item.sellerid);
+        const buyerid = possibleBuyers[Math.floor(Math.random() * possibleBuyers.length)];
+
+        // Transaction ekle
+        await client.query(
+          `INSERT INTO transactions (itemid, sellerid, buyerid, price, transactiondate)
+           VALUES ($1, $2, $3, $4, $5)`,
+          [item.itemid, item.sellerid, buyerid, item.currentprice, new Date()]
+        );
+
+        // Item'i pasifleştir
+        await client.query(
+          `UPDATE items SET isactive = FALSE WHERE itemid = $1`,
+          [item.itemid]
+        );
+
+        await client.query("COMMIT");
+        console.log(`Sold item ${item.itemid} from user ${item.sellerid} to user ${buyerid}`);
+        success++;
+      } catch (err) {
+        await client.query("ROLLBACK");
+        console.log(`Failed to sell item ${item.itemid}: ${err.message}`);
+        failed++;
+      }
+    }
+
+    console.log(`Finished. Success: ${success}, Failed: ${failed}`);
+  } catch (err) {
+    console.error("Simulation failed:", err);
+  } finally {
+    client.release();
+  }
+};
+
+const insertFakeMessages = async () => {
+  const client = await pool.connect();
+  try {
+    // Gerçek kullanıcı ID'lerini çek
+    const userResult = await client.query('SELECT userid FROM users WHERE userid > 0');
+    const userIds = userResult.rows.map(row => row.userid);
+
+    if (userIds.length < 2) {
+      throw new Error('Yeterli sayıda kullanıcı yok.');
+    }
+
+    console.log(`Toplam ${userIds.length} kullanıcı bulundu. Mesaj ekleme başlıyor...`);
+
+    for (let batch = 0; batch < TOTAL_MESSAGES / BATCH_SIZE; batch++) {
+      await client.query('BEGIN');
+      const values = [];
+      const placeholders = [];
+
+      for (let i = 0; i < BATCH_SIZE; i++) {
+        const senderId = faker.helpers.arrayElement(userIds);
+        let receiverId;
+        do {
+          receiverId = faker.helpers.arrayElement(userIds);
+        } while (receiverId === senderId); // Kendine mesaj atmasın
+
+        const content = faker.lorem.sentence();
+        const isRead = faker.datatype.boolean();
+        const timeStamp = faker.date.recent({ days: 10 });
+
+        const offset = i * 5;
+        placeholders.push(`($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5})`);
+        values.push(senderId, receiverId, content, isRead, timeStamp);
+      }
+
+      const query = `
+        INSERT INTO Messages (senderId, receiverId, content, isRead, timeStamp)
+        VALUES ${placeholders.join(', ')};
+      `;
+
+      await client.query(query, values);
+      await client.query('COMMIT');
+      console.log(`✅ Batch ${batch + 1} inserted`);
+    }
+
+    console.log("🎉 200,000 mesaj başarıyla eklendi.");
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error("❌ Hata:", err);
+  } finally {
+    client.release();
+  }
+};
 
 const runAll = async () => {
   try {
 
 
     console.log("📦 Inserting items...");
-    await simulateItemSales();
+    await simulateBasicItemSales();
 
     console.log("✅ All operations completed.");
   } catch (err) {

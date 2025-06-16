@@ -4,77 +4,66 @@ const pool = require('../db');
 
 // get all items
 router.get('/', async (req, res) => {
+  const client = await pool.connect();
   try {
-    const itemsResult = await pool.query('SELECT * FROM Items');
-    const items = itemsResult.rows;
+    const {
+      minPrice,
+      maxPrice,
+      name,
+      category,
+      condition
+    } = req.query;
 
-    if (items.length === 0) {
-      return res.json([]);
+    let query = `
+      SELECT i.*, 
+        COALESCE(MAX(b.bidamount), i.startingprice) AS currentPrice
+      FROM items i
+      LEFT JOIN bids b ON i.itemid = b.itemid
+      WHERE i.isactive = true
+    `;
+
+    const havingClauses = [];
+    const params = [];
+    let count = 1;
+
+    if (minPrice) {
+      havingClauses.push(`COALESCE(MAX(b.bidamount), i.startingprice) >= $${count++}`);
+      params.push(minPrice);
     }
 
-    const bidsResult = await pool.query(
-      'SELECT * FROM Bids WHERE itemid = ANY($1)',
-      [items.map(item => item.itemid)]
-    );
-
-    const bids = bidsResult.rows;
-
-    const itemIdToBids = {};
-    for (const bid of bids) {
-      if (!itemIdToBids[bid.itemid]) {
-        itemIdToBids[bid.itemid] = [];
-      }
-      itemIdToBids[bid.itemid].push(bid);
+    if (maxPrice) {
+      havingClauses.push(`COALESCE(MAX(b.bidamount), i.startingprice) <= $${count++}`);
+      params.push(maxPrice);
     }
 
-    const itemsWithBids = items.map(item => ({
-      ...item,
-      bids: itemIdToBids[item.itemid] || [],
-    }));
+    if (name) {
+      query += ` AND LOWER(i.title) LIKE $${count++}`;
+      params.push(`%${name.toLowerCase()}%`);
+    }
 
-    res.json(itemsWithBids);
+    if (category) {
+      query += ` AND i.category = $${count++}`;
+      params.push(category);
+    }
+
+    query += ` GROUP BY i.itemid`;
+
+    if (havingClauses.length > 0) {
+      query += ` HAVING ` + havingClauses.join(" AND ");
+    }
+
+    query += ` ORDER BY i.itemid`;
+
+    const result = await client.query(query, params);
+    res.json(result.rows);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
+    console.error("Error fetching filtered items:", err);
+    res.status(500).send("Server error");
+  } finally {
+    client.release();
   }
 });
 
-// get all available items
-router.get('/available', async (req, res) => {
-  try {
-    const itemsResult = await pool.query('SELECT * FROM Items WHERE isactive = TRUE');
-    const items = itemsResult.rows;
-
-    if (items.length === 0) {
-      return res.json([]);
-    }
-
-    const bidsResult = await pool.query(
-      'SELECT * FROM Bids WHERE itemid = ANY($1)',
-      [items.map(item => item.itemid)]
-    );
-
-    const bids = bidsResult.rows;
-
-    const itemIdToBids = {};
-    for (const bid of bids) {
-      if (!itemIdToBids[bid.itemid]) {
-        itemIdToBids[bid.itemid] = [];
-      }
-      itemIdToBids[bid.itemid].push(bid);
-    }
-
-    const itemsWithBids = items.map(item => ({
-      ...item,
-      bids: itemIdToBids[item.itemid] || [],
-    }));
-
-    res.json(itemsWithBids);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server error');
-  }
-});
 
 // get a spesific item
 router.get('/:itemId', async (req, res) => {

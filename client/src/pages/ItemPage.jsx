@@ -87,7 +87,6 @@ const handleMessageOwner = async (e) => {
     const fetchBids = async () => {
       try {
         const res = await axios.get(`http://localhost:5000/api/bids/item/${itemId}`);
-        console.log("bids",res.data);
         setBids(res.data);
       } catch (err) {
         console.error('Bids fetch error', err);
@@ -101,10 +100,9 @@ const handleMessageOwner = async (e) => {
   const handleMarkAsSold = async () => {
   try {
     const res = await axios.put(`http://localhost:5000/api/items/${itemId}/mark-sold`);
-    alert(res.data.message); // Backend’den mesajı göster
+    alert(res.data.message); 
     if (res.status === 200) {
       setItem({ ...item, isactive: false });
-      // Bids vs güncellenebilir istersen burada yeniden fetch et
     }
   } catch (err) {
     alert(err.response?.data?.message || 'Error marking as sold');
@@ -121,6 +119,8 @@ const handleMessageOwner = async (e) => {
         bidAmount: newBidAmount,
       });
       setNewBidAmount('');
+      const res2 = await axios.get(`http://localhost:5000/api/items/${itemId}`);
+      setItem(res2.data);
       const res = await axios.get(`http://localhost:5000/api/bids/item/${itemId}`);
       setBids(res.data);
     } catch (err) {

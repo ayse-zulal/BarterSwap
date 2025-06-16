@@ -4,21 +4,53 @@ import ItemFilters from "../components/ItemFilters.jsx";
 
 const ItemsView = () => {
   const [items, setItems] = useState([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [expandedItemId, setExpandedItemId] = useState(null);
+  const [bids, setBids] = useState({});
+  const [loadingBids, setLoadingBids] = useState(false);
+  const [filteredItems, setFilteredItems] = useState([]);
   const [visibleCountItems, setVisibleCountItems] = useState(20);
   const [visibleCountBids, setVisibleCountBids] = useState(20);
-  const [filteredItems, setFilteredItems] = useState([]);
+
 
   useEffect(() => {
-    axios.get("http://localhost:5000/api/items").then(res => {
-      setItems(res.data);
-      setFilteredItems(res.data);
-    });
-  }, []);
+    loadItems();
+  }, [page]);
 
-  const [expandedItemId, setExpandedItemId] = useState(null);
+  const loadItems = async () => {
+    try {
+      const res = await axios.get(`http://localhost:5000/api/items`);
+      if (res.data.length === 0) {
+        setHasMore(false);
+      } else {
+        setItems(prev => [...prev, ...res.data]);
+        setFilteredItems(prev => [...prev, ...res.data]);
+      }
+    } catch (err) {
+      console.error("Error fetching items:", err);
+    }
+  };
 
-  const toggleExpand = (itemId) => {
-    setExpandedItemId(prev => (prev === itemId ? null : itemId));
+  const toggleExpand = async (itemId) => {
+    if (expandedItemId === itemId) {
+      setExpandedItemId(null);
+      return;
+    }
+
+    setExpandedItemId(itemId);
+
+    if (!bids[itemId]) {
+      setLoadingBids(true);
+      try {
+        const res = await axios.get(`http://localhost:5000/api/bids/item/${itemId}`);
+        setBids(prev => ({ ...prev, [itemId]: res.data }));
+      } catch (err) {
+        console.error("Error loading bids:", err);
+      } finally {
+        setLoadingBids(false);
+      }
+    }
   };
 
   const handleDeleteItem = async (itemId) => {
@@ -27,19 +59,25 @@ const ItemsView = () => {
 
     try {
       await axios.delete(`http://localhost:5000/api/items/${itemId}`);
+      alert("Item deleted successfully.");
+      setItems(prev => prev.filter(item => item.itemid !== itemId));
     } catch (err) {
       console.error("Error deleting item:", err);
       alert("Could not delete item.");
     }
   };
 
-  const applyItemFilters = ({ minPrice, maxPrice, date, name, type }) => {
-    let filtered = type ? [...items] : [...items];
-      if (minPrice) filtered = filtered.filter(b => b.currentPrice >= parseFloat(minPrice));
-      if (maxPrice) filtered = filtered.filter(b => b.currentPrice <= parseFloat(maxPrice));
-      if (name) filtered = filtered.filter(b => b.title.toLowerCase().includes(name.toLowerCase()));
-      setFilteredItems(filtered)
-  };
+  const applyItemFilters = async (filters) => {
+  try {
+    const query = new URLSearchParams(filters).toString();
+    const res = await axios.get(`http://localhost:5000/api/items?${query}`);
+    setFilteredItems(res.data);
+  } catch (err) {
+    console.error("Filter error:", err);
+  }
+};
+const visibleItems = filteredItems.length > 0 ? filteredItems : items;
+
 
   return (
     <div>
@@ -109,10 +147,10 @@ const ItemsView = () => {
               {expandedItemId === item.itemid && (
                 <tr>
                   <td colSpan={8} style={{backgroundColor: "#C3b091", color: "white",textAlign: "left"}}>
-                    {item.bids && item.bids.length > 0 ? (
+                    {bids && bids.length > 0 ? (
                       <ul>
-                        {item.bids.slice(0, visibleCountBids)
-                  .sort((a, b) => b.bidamount - a.bidamount).map(bid => (
+                        {bids.slice(0, visibleCountBids)
+                        .sort((a, b) => b.bidamount - a.bidamount).map(bid => (
                           <li key={bid.bidid}>
                             <strong>{bid.bidamount}</strong> by User ID: {bid.userid}
                           </li>
@@ -122,7 +160,7 @@ const ItemsView = () => {
                       <p>No bids for this item.</p>
                     )}
 
-                    {visibleCountBids < item.bids.length && (
+                    {visibleCountBids < bids.length && (
                       <div style={{ textAlign: "center", marginTop: "1rem" }}>
                         <button
                           onClick={() => setVisibleCountBids(visibleCountBids + 20)}

@@ -5,7 +5,7 @@ const HomePage = () => {
   const items = useItemStore((state) => state.filteredItems);
   const fetchItems = useItemStore(state => state.fetchItems);
   const filterItems = useItemStore(state => state.filterItems);
-    const [visibleCountItems, setVisibleCountItems] = useState(20);
+    const [visibleCountItems, setVisibleCountItems] = useState(200);
 
   const [filters, setFilters] = useState({
     searchQuery: "",
@@ -15,10 +15,6 @@ const HomePage = () => {
     category: "",
     condition: ""
   });
-
-  useEffect(() => {
-    fetchItems();
-  }, [fetchItems]);
 
   useEffect(() => {
     filterItems({
@@ -81,7 +77,6 @@ const HomePage = () => {
             <option value="home">Home</option>
             <option value="furniture">Furniture</option>
             <option value="beauty">Beauty Products</option>
-            <option value="other">Other</option>
           </select>
           <select
             value={filters.condition}

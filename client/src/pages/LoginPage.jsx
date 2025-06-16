@@ -10,6 +10,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const fetchUser = useAuthStore(state => state.fetchUser);
   const tokenExpired = useAuthStore(state => state.tokenExpired);
+  const setTokenExpired = useAuthStore(state => state.setTokenExpired);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -24,6 +25,7 @@ const LoginPage = () => {
       localStorage.setItem("token", res.data.token);
 
       if (tokenExpired) {
+        setTokenExpired(false);
         await axios.post(
           "http://localhost:5000/api/auth/increment-streak",
           {},

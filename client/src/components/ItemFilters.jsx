@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 const ItemFilters = ({ onApply, type}) => {
+  const [category, setCategory] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [name, setName] = useState("");
@@ -8,6 +9,19 @@ const ItemFilters = ({ onApply, type}) => {
 
   return (
     <div style={{ marginBottom: "1rem", display: "flex", flexWrap: "wrap", flexDirection: "row", gap: "0.5rem" }}>
+      <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            style={{padding: "0.5rem", backgroundColor: '#f0efd9', border: '1px solid #ccc', borderRadius: '8px', cursor: 'pointer'}}
+          >
+            <option value="">All Categories</option>
+            <option value="electronics">Electronics</option>
+            <option value="books">Books</option>
+            <option value="fashion">Clothing</option>
+            <option value="home">Home</option>
+            <option value="furniture">Furniture</option>
+            <option value="beauty">Beauty Products</option>
+          </select>
       <input
         type="string"
         placeholder="Item Name"
@@ -39,7 +53,7 @@ const ItemFilters = ({ onApply, type}) => {
         onChange={(e) => setMaxPrice(e.target.value)}
       />
       
-      <button onClick={() => onApply({ minPrice, maxPrice, date, name, type })} style={{
+      <button onClick={() => onApply({ minPrice, maxPrice, date, name, category, type })} style={{
                       marginTop: '0.5rem',
                       padding: '0.6rem 1.2rem',
                       backgroundColor: '#8fbc8f',
